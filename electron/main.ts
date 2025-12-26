@@ -143,6 +143,92 @@ try {
     // Move IPC handlers into app.on('ready') block or ensure they are registered early
     // Actually, top level is usually fine, but let's add a log that they are registered.
     console.log('Main: IPC handlers registered');
+    ipcMain.handle('get-contacts', async (event, options?: { globalFilter?: string, first?: number, rows?: number }) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const filePath = path.join(userDataPath, 'contacts.json');
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                let contacts: any[] = JSON.parse(data);
+
+                // filtering
+                if (options?.globalFilter) {
+                    const filterValue = options.globalFilter.toLowerCase();
+                    contacts = contacts.filter(c =>
+                        (c.name && c.name.toLowerCase().includes(filterValue)) ||
+                        (c.email && c.email.toLowerCase().includes(filterValue)) ||
+                        (c.phone && c.phone.toLowerCase().includes(filterValue)) ||
+                        (c.gstin && c.gstin.toLowerCase().includes(filterValue))
+                    );
+                }
+
+                const totalRecords = contacts.length;
+
+                // pagination
+                if (options?.first !== undefined && options?.rows !== undefined) {
+                    contacts = contacts.slice(options.first, options.first + options.rows);
+                }
+
+                return { data: contacts, totalRecords };
+            }
+            return { data: [], totalRecords: 0 };
+        } catch (error) {
+            console.error('Error getting contacts:', error);
+            return { data: [], totalRecords: 0 };
+        }
+    });
+
+    ipcMain.handle('save-contact', async (event, contact) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            if (!fs.existsSync(userDataPath)) {
+                fs.mkdirSync(userDataPath, { recursive: true });
+            }
+            const filePath = path.join(userDataPath, 'contacts.json');
+            let contacts: any[] = [];
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                contacts = JSON.parse(data);
+            }
+
+            if (contact.id) {
+                // Update existing
+                const index = contacts.findIndex(c => c.id === contact.id);
+                if (index !== -1) {
+                    contacts[index] = { ...contact };
+                } else {
+                    return { success: false, error: 'Contact not found' };
+                }
+            } else {
+                // Create new
+                contacts.push({ ...contact, id: Date.now() });
+            }
+
+            fs.writeFileSync(filePath, JSON.stringify(contacts, null, 2));
+            return { success: true };
+        } catch (error) {
+            console.error('Error saving contact:', error);
+            return { success: false, error: (error as Error).message };
+        }
+    });
+
+    ipcMain.handle('delete-contact', async (event, id) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const filePath = path.join(userDataPath, 'contacts.json');
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                let contacts: any[] = JSON.parse(data);
+                contacts = contacts.filter(c => c.id !== id);
+                fs.writeFileSync(filePath, JSON.stringify(contacts, null, 2));
+                return { success: true };
+            }
+            return { success: false, error: 'File not found' };
+        } catch (error) {
+            console.error('Error deleting contact:', error);
+            return { success: false, error: (error as Error).message };
+        }
+    });
 } catch (e) {
     console.error('Error in Electron main process:', e);
 }

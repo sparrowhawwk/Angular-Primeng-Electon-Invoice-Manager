@@ -27,7 +27,13 @@ export class HeaderComponent implements OnInit {
             {
                 label: 'Admin',
                 icon: 'pi pi-cog',
-                routerLink: '/admin'
+                items: [
+                    {
+                        label: 'Contacts',
+                        icon: 'pi pi-address-book',
+                        routerLink: '/admin/contacts'
+                    }
+                ]
             },
             {
                 label: 'Settings',
