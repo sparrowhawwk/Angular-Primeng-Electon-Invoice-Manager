@@ -1,0 +1,94 @@
+{
+  "name": "invoice-manager",
+  "version": "0.0.0",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "electron:tsc": "tsc -p tsconfig.electron.json",
+    "electron:watch": "tsc -p tsconfig.electron.json -w",
+    "electron:serve": "wait-on http-get://localhost:4200/ && electron . --serve",
+    "start:electron": "concurrently --kill-others \"npm start\" \"npm run electron:serve\" \"npm run electron:watch\"",
+    "build:electron": "ng build --base-href ./ && npm run electron:tsc",
+    "package:mac": "npm run build:electron && electron-builder --mac",
+    "package:win": "npm run build:electron && electron-builder --win",
+    "package:all": "npm run build:electron && electron-builder --mac --win"
+  },
+  "build": {
+    "appId": "com.invoice.manager",
+    "productName": "Invoice Manager",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/invoice-manager/browser/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.finance",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "private": true,
+  "packageManager": "npm@10.9.4",
+  "dependencies": {
+    "@angular/animations": "^21.0.6",
+    "@angular/common": "^21.0.0",
+    "@angular/compiler": "^21.0.0",
+    "@angular/core": "^21.0.0",
+    "@angular/forms": "^21.0.0",
+    "@angular/platform-browser": "^21.0.0",
+    "@angular/router": "^21.0.0",
+    "@fontsource/inter": "^5.2.8",
+    "primeicons": "^7.0.0",
+    "primeng": "^21.0.2",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.0.4",
+    "@angular/cli": "^21.0.4",
+    "@angular/compiler-cli": "^21.0.0",
+    "@primeng/themes": "^21.0.2",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^25.0.3",
+    "autoprefixer": "^10.4.23",
+    "concurrently": "^9.2.1",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
+    "electron-debug": "^4.1.0",
+    "electron-reloader": "^1.2.3",
+    "jsdom": "^27.1.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.9.2",
+    "vitest": "^4.0.8",
+    "wait-on": "^9.0.3"
+  }
+}
