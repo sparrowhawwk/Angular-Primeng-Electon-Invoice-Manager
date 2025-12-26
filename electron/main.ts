@@ -229,6 +229,200 @@ try {
             return { success: false, error: (error as Error).message };
         }
     });
+
+    // Inventory Handlers
+    ipcMain.handle('get-products', async (event, options?: { globalFilter?: string, first?: number, rows?: number }) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const filePath = path.join(userDataPath, 'products.json');
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                let products: any[] = JSON.parse(data);
+
+                if (options?.globalFilter) {
+                    const filterValue = options.globalFilter.toLowerCase();
+                    products = products.filter(p =>
+                        (p.name && p.name.toLowerCase().includes(filterValue)) ||
+                        (p.description && p.description.toLowerCase().includes(filterValue))
+                    );
+                }
+
+                const totalRecords = products.length;
+
+                if (options?.first !== undefined && options?.rows !== undefined) {
+                    products = products.slice(options.first, options.first + options.rows);
+                }
+
+                return { data: products, totalRecords };
+            }
+            return { data: [], totalRecords: 0 };
+        } catch (error) {
+            console.error('Error getting products:', error);
+            return { data: [], totalRecords: 0 };
+        }
+    });
+
+    ipcMain.handle('save-product', async (event, product) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            if (!fs.existsSync(userDataPath)) {
+                fs.mkdirSync(userDataPath, { recursive: true });
+            }
+            const filePath = path.join(userDataPath, 'products.json');
+            let products: any[] = [];
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                products = JSON.parse(data);
+            }
+
+            if (product.id) {
+                const index = products.findIndex(p => p.id === product.id);
+                if (index !== -1) {
+                    products[index] = { ...product };
+                } else {
+                    return { success: false, error: 'Product not found' };
+                }
+            } else {
+                products.push({ ...product, id: Date.now() });
+            }
+
+            fs.writeFileSync(filePath, JSON.stringify(products, null, 2));
+            return { success: true };
+        } catch (error) {
+            console.error('Error saving product:', error);
+            return { success: false, error: (error as Error).message };
+        }
+    });
+
+    ipcMain.handle('delete-product', async (event, id) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const filePath = path.join(userDataPath, 'products.json');
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                let products: any[] = JSON.parse(data);
+                products = products.filter(p => p.id !== id);
+                fs.writeFileSync(filePath, JSON.stringify(products, null, 2));
+                return { success: true };
+            }
+            return { success: false, error: 'File not found' };
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            return { success: false, error: (error as Error).message };
+        }
+    });
+
+    // Invoice Handlers
+    ipcMain.handle('get-invoices', async (event, options?: { globalFilter?: string, first?: number, rows?: number }) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const filePath = path.join(userDataPath, 'invoices.json');
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                let invoices: any[] = JSON.parse(data);
+
+                if (options?.globalFilter) {
+                    const filterValue = options.globalFilter.toLowerCase();
+                    invoices = invoices.filter(inv =>
+                        (inv.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(filterValue)) ||
+                        (inv.customerName && inv.customerName.toLowerCase().includes(filterValue))
+                    );
+                }
+
+                const totalRecords = invoices.length;
+
+                if (options?.first !== undefined && options?.rows !== undefined) {
+                    invoices = invoices.slice(options.first, options.first + options.rows);
+                }
+
+                return { data: invoices, totalRecords };
+            }
+            return { data: [], totalRecords: 0 };
+        } catch (error) {
+            console.error('Error getting invoices:', error);
+            return { data: [], totalRecords: 0 };
+        }
+    });
+
+    ipcMain.handle('get-invoice-by-id', async (event, id: number) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const filePath = path.join(userDataPath, 'invoices.json');
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                const invoices: any[] = JSON.parse(data);
+                const invoice = invoices.find(inv => inv.id === id);
+                return invoice || null;
+            }
+            return null;
+        } catch (error) {
+            console.error('Error getting invoice by id:', error);
+            return null;
+        }
+    });
+
+    ipcMain.handle('save-invoice', async (event, invoice) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            if (!fs.existsSync(userDataPath)) {
+                fs.mkdirSync(userDataPath, { recursive: true });
+            }
+            const filePath = path.join(userDataPath, 'invoices.json');
+            let invoices: any[] = [];
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                invoices = JSON.parse(data);
+            }
+
+            if (invoice.id) {
+                const index = invoices.findIndex(inv => inv.id === invoice.id);
+                if (index !== -1) {
+                    invoices[index] = { ...invoice };
+                } else {
+                    return { success: false, error: 'Invoice not found' };
+                }
+            } else {
+                const today = new Date();
+                const dateStr = today.getFullYear().toString() +
+                    (today.getMonth() + 1).toString().padStart(2, '0') +
+                    today.getDate().toString().padStart(2, '0');
+
+                const dayInvoices = invoices.filter(inv => inv.invoiceNumber && inv.invoiceNumber.includes(`INV-${dateStr}`));
+                const sequence = (dayInvoices.length + 1).toString().padStart(2, '0');
+                const invoiceNumber = `INV-${dateStr}-${sequence}`;
+
+                invoices.push({
+                    ...invoice,
+                    id: Date.now(),
+                    invoiceNumber: invoiceNumber
+                });
+            }
+
+            fs.writeFileSync(filePath, JSON.stringify(invoices, null, 2));
+            return { success: true };
+        } catch (error) {
+            console.error('Error saving invoice:', error);
+            return { success: false, error: (error as Error).message };
+        }
+    });
+
+    ipcMain.handle('delete-invoice', async (event, id) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const filePath = path.join(userDataPath, 'invoices.json');
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                let invoices: any[] = JSON.parse(data);
+                invoices = invoices.filter(inv => inv.id !== id);
+                fs.writeFileSync(filePath, JSON.stringify(invoices, null, 2));
+                return { success: true };
+            }
+            return { success: false, error: 'File not found' };
+        } catch (error) {
+            console.error('Error deleting invoice:', error);
+            return { success: false, error: (error as Error).message };
+        }
+    });
 } catch (e) {
     console.error('Error in Electron main process:', e);
 }

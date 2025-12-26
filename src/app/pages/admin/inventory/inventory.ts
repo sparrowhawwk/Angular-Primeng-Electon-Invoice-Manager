@@ -8,13 +8,14 @@ import { TextareaModule } from 'primeng/textarea';
 import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { MessageService, ConfirmationService } from 'primeng/api';
-import { ContactService } from '../../../services/contact.service';
+import { InventoryService } from '../../../services/inventory.service';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { KeyFilterModule } from 'primeng/keyfilter';
 
 @Component({
-  selector: 'app-contacts',
+  selector: 'app-inventory',
   standalone: true,
   imports: [
     CommonModule,
@@ -27,7 +28,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
     ToastModule,
     IconFieldModule,
     InputIconModule,
-    ConfirmDialogModule
+    ConfirmDialogModule,
+    KeyFilterModule
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -35,24 +37,24 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
       <p-toast></p-toast>
       
       <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-bold">Contacts Management</h2>
+        <h2 class="text-2xl font-bold">Inventory Management</h2>
       </div>
 
       <p-table 
-        [value]="contacts()" 
+        [value]="products()" 
         [lazy]="true" 
-        (onLazyLoad)="loadContacts($event)"
+        (onLazyLoad)="loadProducts($event)"
         [loading]="loading()"
         [rows]="10"
         [paginator]="true"
         [totalRecords]="totalRecords()"
-        [globalFilterFields]="['name', 'email', 'phone', 'gstin']"
+        [globalFilterFields]="['name', 'description']"
         #dt
       >
         <ng-template #caption>
           <div class="flex justify-between items-center bg-gray-50 p-4">
             <p-button 
-              label="Create New Contact" 
+              label="Add New Product" 
               icon="pi pi-plus" 
               (onClick)="showDialog()"
             ></p-button>
@@ -72,18 +74,18 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
         <ng-template #header>
           <tr>
             <th>Name</th>
-            <th>Phone</th>
-            <th>Email</th>
-            <th>GSTIN</th>
+            <th>Description</th>
+            <th>Total Units</th>
+            <th>Unit Price</th>
             <th style="width: 100px">Actions</th>
           </tr>
         </ng-template>
-        <ng-template #body let-contact>
+        <ng-template #body let-product>
           <tr>
-            <td>{{ contact.name }}</td>
-            <td>{{ contact.phone }}</td>
-            <td>{{ contact.email }}</td>
-            <td>{{ contact.gstin }}</td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.description }}</td>
+            <td>{{ product.totalUnits }}</td>
+            <td>{{ product.unitPrice | currency:'INR' }}</td>
             <td>
               <div class="flex gap-2">
                 <p-button 
@@ -91,21 +93,21 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
                   [rounded]="true" 
                   [text]="true" 
                   severity="info"
-                  (onClick)="viewContact(contact)"
+                  (onClick)="viewProduct(product)"
                 ></p-button>
                 <p-button 
                   icon="pi pi-pencil" 
                   [rounded]="true" 
                   [text]="true" 
                   severity="secondary"
-                  (onClick)="editContact(contact)"
+                  (onClick)="editProduct(product)"
                 ></p-button>
                 <p-button 
                   icon="pi pi-trash" 
                   [rounded]="true" 
                   [text]="true" 
                   severity="danger"
-                  (onClick)="deleteContact(contact)"
+                  (onClick)="deleteProduct(product)"
                 ></p-button>
               </div>
             </td>
@@ -113,14 +115,14 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
         </ng-template>
         <ng-template #emptymessage>
           <tr>
-            <td colspan="5" class="text-center p-4">No contacts found.</td>
+            <td colspan="5" class="text-center p-4">No products found.</td>
           </tr>
         </ng-template>
       </p-table>
 
-      <!-- Create Contact Dialog -->
+      <!-- Create/Edit Product Dialog -->
       <p-dialog 
-        [header]="viewMode() ? 'View Contact' : (contactForm().id ? 'Edit Contact' : 'Create New Contact')" 
+        [header]="viewMode() ? 'View Product' : (currentProductId() ? 'Edit Product' : 'Add New Product')" 
         [(visible)]="displayDialog" 
         [modal]="true" 
         [style]="{width: '600px'}"
@@ -131,37 +133,25 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
           <!-- Name -->
           <div class="flex flex-col gap-2">
             <label for="name" class="font-medium">Name</label>
-            <input pInputText id="name" [(ngModel)]="contactForm().name" [disabled]="viewMode()" />
+            <input pInputText id="name" [ngModel]="productName()" (ngModelChange)="productName.set($event)" [disabled]="viewMode()" />
           </div>
 
-          <!-- Phone Number -->
+          <!-- Total Units -->
           <div class="flex flex-col gap-2">
-            <label for="phone" class="font-medium">Phone Number</label>
-            <input pInputText id="phone" [(ngModel)]="contactForm().phone" [disabled]="viewMode()" />
+            <label for="totalUnits" class="font-medium">Total Units</label>
+            <input pInputText id="totalUnits" pKeyFilter="int" [ngModel]="productTotalUnits()" (ngModelChange)="productTotalUnits.set($event)" [disabled]="viewMode()" />
           </div>
 
-          <!-- Email Address -->
+          <!-- Unit Price -->
           <div class="flex flex-col gap-2">
-            <label for="email" class="font-medium">Email Address</label>
-            <input pInputText id="email" [(ngModel)]="contactForm().email" [disabled]="viewMode()" />
+            <label for="unitPrice" class="font-medium">Unit Price</label>
+            <input pInputText id="unitPrice" pKeyFilter="num" [ngModel]="productUnitPrice()" (ngModelChange)="productUnitPrice.set($event)" [disabled]="viewMode()" />
           </div>
 
-          <!-- GSTIN -->
-          <div class="flex flex-col gap-2">
-            <label for="gstin" class="font-medium">GSTIN</label>
-            <input pInputText id="gstin" [(ngModel)]="contactForm().gstin" [disabled]="viewMode()" />
-          </div>
-
-          <!-- Primary Address -->
+          <!-- Description -->
           <div class="flex flex-col gap-2 col-span-2">
-            <label for="address1" class="font-medium">Primary Address</label>
-            <textarea pTextarea id="address1" [(ngModel)]="contactForm().address1" rows="3" [disabled]="viewMode()"></textarea>
-          </div>
-
-          <!-- Secondary Address -->
-          <div class="flex flex-col gap-2 col-span-2">
-            <label for="address2" class="font-medium">Secondary Address</label>
-            <textarea pTextarea id="address2" [(ngModel)]="contactForm().address2" rows="3" [disabled]="viewMode()"></textarea>
+            <label for="description" class="font-medium">Description</label>
+            <textarea pTextarea id="description" [ngModel]="productDescription()" (ngModelChange)="productDescription.set($event)" rows="3" [disabled]="viewMode()"></textarea>
           </div>
         </div>
 
@@ -177,7 +167,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
           <p-button 
             label="Save" 
             icon="pi pi-check" 
-            (onClick)="saveContact()"
+            (onClick)="saveProduct()"
             *ngIf="!viewMode()"
           ></p-button>
         </ng-template>
@@ -212,34 +202,29 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
     }
   `,
 })
-export class ContactsComponent implements OnInit {
-  contacts = signal<any[]>([]);
+export class InventoryComponent implements OnInit {
+  products = signal<any[]>([]);
   loading = signal(false);
   totalRecords = signal(0);
   displayDialog = false;
   viewMode = signal(false);
 
-  contactForm = signal({
-    id: undefined as number | undefined,
-    name: '',
-    phone: '',
-    email: '',
-    gstin: '',
-    address1: '',
-    address2: ''
-  });
+  productName = signal('');
+  productDescription = signal('');
+  productTotalUnits = signal<any>('');
+  productUnitPrice = signal<any>('');
+  currentProductId = signal<number | undefined>(undefined);
 
   constructor(
-    private contactService: ContactService,
+    private inventoryService: InventoryService,
     private messageService: MessageService,
     private confirmationService: ConfirmationService
   ) { }
 
   ngOnInit() {
-    // Initial load will be handled by p-table's onLazyLoad
   }
 
-  async loadContacts(event?: TableLazyLoadEvent) {
+  async loadProducts(event?: TableLazyLoadEvent) {
     this.loading.set(true);
     try {
       const options = {
@@ -247,11 +232,11 @@ export class ContactsComponent implements OnInit {
         first: event?.first || 0,
         rows: event?.rows || 10
       };
-      const response = await this.contactService.getContacts(options);
-      this.contacts.set(response.data);
+      const response = await this.inventoryService.getProducts(options);
+      this.products.set(response.data);
       this.totalRecords.set(response.totalRecords);
     } catch (error) {
-      console.error('Error loading contacts:', error);
+      console.error('Error loading products:', error);
     } finally {
       this.loading.set(false);
     }
@@ -259,54 +244,58 @@ export class ContactsComponent implements OnInit {
 
   showDialog() {
     this.viewMode.set(false);
-    this.contactForm.set({
-      id: undefined,
-      name: '',
-      phone: '',
-      email: '',
-      gstin: '',
-      address1: '',
-      address2: ''
-    });
+    this.currentProductId.set(undefined);
+    this.productName.set('');
+    this.productDescription.set('');
+    this.productTotalUnits.set('');
+    this.productUnitPrice.set('');
     this.displayDialog = true;
   }
 
-  viewContact(contact: any) {
-    this.contactForm.set({ ...contact });
+  viewProduct(product: any) {
+    this.currentProductId.set(product.id);
+    this.productName.set(product.name);
+    this.productDescription.set(product.description);
+    this.productTotalUnits.set(product.totalUnits);
+    this.productUnitPrice.set(product.unitPrice);
     this.viewMode.set(true);
     this.displayDialog = true;
   }
 
-  editContact(contact: any) {
+  editProduct(product: any) {
     this.viewMode.set(false);
-    this.contactForm.set({ ...contact });
+    this.currentProductId.set(product.id);
+    this.productName.set(product.name);
+    this.productDescription.set(product.description);
+    this.productTotalUnits.set(product.totalUnits);
+    this.productUnitPrice.set(product.unitPrice);
     this.displayDialog = true;
   }
 
-  deleteContact(contact: any) {
+  deleteProduct(product: any) {
     this.confirmationService.confirm({
-      message: `Are you sure you want to delete ${contact.name}?`,
+      message: `Are you sure you want to delete ${product.name}?`,
       header: 'Confirm Deletion',
       icon: 'pi pi-exclamation-triangle',
       accept: async () => {
         try {
-          const response = await this.contactService.deleteContact(contact.id);
+          const response = await this.inventoryService.deleteProduct(product.id);
           if (response && response.success) {
             this.messageService.add({
               severity: 'success',
               summary: 'Success',
-              detail: 'Contact deleted successfully'
+              detail: 'Product deleted successfully'
             });
-            this.loadContacts();
+            this.loadProducts();
           } else {
             this.messageService.add({
               severity: 'error',
               summary: 'Error',
-              detail: response.error || 'Failed to delete contact'
+              detail: response.error || 'Failed to delete product'
             });
           }
         } catch (error) {
-          console.error('Error deleting contact:', error);
+          console.error('Error deleting product:', error);
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
@@ -317,31 +306,39 @@ export class ContactsComponent implements OnInit {
     });
   }
 
-  async saveContact() {
-    if (!this.contactForm().name) {
+  async saveProduct() {
+    if (!this.productName()) {
       this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Name is required' });
       return;
     }
 
+    const product = {
+      id: this.currentProductId(),
+      name: this.productName(),
+      description: this.productDescription(),
+      totalUnits: this.productTotalUnits(),
+      unitPrice: this.productUnitPrice()
+    };
+
     try {
-      const response = await this.contactService.saveContact(this.contactForm());
+      const response = await this.inventoryService.saveProduct(product);
       if (response && response.success) {
         this.messageService.add({
           severity: 'success',
           summary: 'Success',
-          detail: 'Contact saved successfully'
+          detail: 'Product saved successfully'
         });
         this.displayDialog = false;
-        this.loadContacts();
+        this.loadProducts();
       } else {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Failed to save contact'
+          detail: 'Failed to save product'
         });
       }
     } catch (error) {
-      console.error('Error saving contact:', error);
+      console.error('Error saving product:', error);
       this.messageService.add({
         severity: 'error',
         summary: 'Error',
@@ -350,4 +347,3 @@ export class ContactsComponent implements OnInit {
     }
   }
 }
-

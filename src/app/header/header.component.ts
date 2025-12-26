@@ -32,6 +32,11 @@ export class HeaderComponent implements OnInit {
                         label: 'Contacts',
                         icon: 'pi pi-address-book',
                         routerLink: '/admin/contacts'
+                    },
+                    {
+                        label: 'Inventory',
+                        icon: 'pi pi-box',
+                        routerLink: '/admin/inventory'
                     }
                 ]
             },
