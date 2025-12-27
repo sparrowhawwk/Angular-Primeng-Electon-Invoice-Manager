@@ -7,10 +7,10 @@ import { CompanyService } from '../../services/company.service';
 import { ContactService } from '../../services/contact.service';
 
 @Component({
-    selector: 'app-invoice-summary',
-    standalone: true,
-    imports: [CommonModule, ButtonModule, RouterLink],
-    template: `
+  selector: 'app-invoice-summary',
+  standalone: true,
+  imports: [CommonModule, ButtonModule, RouterLink],
+  template: `
     <div class="p-6 max-w-5xl mx-auto">
       <div class="flex justify-between items-center mb-6 no-print">
         <p-button 
@@ -18,6 +18,8 @@ import { ContactService } from '../../services/contact.service';
           icon="pi pi-arrow-left" 
           [text]="true" 
           routerLink="/invoices"
+          variant="outlined"
+          severity="secondary"
         ></p-button>
         <div class="flex gap-2">
           <p-button 
@@ -143,37 +145,37 @@ import { ContactService } from '../../services/contact.service';
   `
 })
 export class InvoiceSummaryComponent implements OnInit {
-    invoice = signal<any>(null);
-    company = signal<any>(null);
-    customer = signal<any>(null);
+  invoice = signal<any>(null);
+  company = signal<any>(null);
+  customer = signal<any>(null);
 
-    constructor(
-        private route: ActivatedRoute,
-        private router: Router,
-        private invoiceService: InvoiceService,
-        private companyService: CompanyService,
-        private contactService: ContactService
-    ) { }
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private invoiceService: InvoiceService,
+    private companyService: CompanyService,
+    private contactService: ContactService
+  ) { }
 
-    async ngOnInit() {
-        const id = Number(this.route.snapshot.paramMap.get('id'));
-        if (id) {
-            const inv = await this.invoiceService.getInvoiceById(id);
-            if (inv) {
-                this.invoice.set(inv);
-                this.company.set(await this.companyService.getCompanyInfo());
+  async ngOnInit() {
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    if (id) {
+      const inv = await this.invoiceService.getInvoiceById(id);
+      if (inv) {
+        this.invoice.set(inv);
+        this.company.set(await this.companyService.getCompanyInfo());
 
-                // Fetch specific customer details
-                const resp = await this.contactService.getContacts({ first: 0, rows: 1000 });
-                const cust = resp.data.find((c: any) => c.id === inv.customerId);
-                this.customer.set(cust);
-            } else {
-                this.router.navigate(['/invoices']);
-            }
-        }
+        // Fetch specific customer details
+        const resp = await this.contactService.getContacts({ first: 0, rows: 1000 });
+        const cust = resp.data.find((c: any) => c.id === inv.customerId);
+        this.customer.set(cust);
+      } else {
+        this.router.navigate(['/invoices']);
+      }
     }
+  }
 
-    print() {
-        window.print();
-    }
+  print() {
+    window.print();
+  }
 }

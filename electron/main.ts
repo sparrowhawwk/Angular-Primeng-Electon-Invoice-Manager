@@ -374,9 +374,13 @@ try {
                 invoices = JSON.parse(data);
             }
 
+            let isNewFinalization = false;
             if (invoice.id) {
                 const index = invoices.findIndex(inv => inv.id === invoice.id);
                 if (index !== -1) {
+                    if (invoice.status === 'finalized' && invoices[index].status !== 'finalized') {
+                        isNewFinalization = true;
+                    }
                     invoices[index] = { ...invoice };
                 } else {
                     return { success: false, error: 'Invoice not found' };
@@ -391,11 +395,37 @@ try {
                 const sequence = (dayInvoices.length + 1).toString().padStart(2, '0');
                 const invoiceNumber = `INV-${dateStr}-${sequence}`;
 
+                if (invoice.status === 'finalized') {
+                    isNewFinalization = true;
+                }
+
                 invoices.push({
                     ...invoice,
                     id: Date.now(),
                     invoiceNumber: invoiceNumber
                 });
+            }
+
+            // Perform stock deduction if finalizing
+            if (isNewFinalization && invoice.items && Array.isArray(invoice.items)) {
+                const productsPath = path.join(userDataPath, 'products.json');
+                if (fs.existsSync(productsPath)) {
+                    const productsData = fs.readFileSync(productsPath, 'utf-8');
+                    let products = JSON.parse(productsData);
+                    let productsUpdated = false;
+
+                    invoice.items.forEach((item: any) => {
+                        const productIndex = products.findIndex((p: any) => p.id === item.productId);
+                        if (productIndex !== -1) {
+                            products[productIndex].totalUnits = (products[productIndex].totalUnits || 0) - (item.quantity || 0);
+                            productsUpdated = true;
+                        }
+                    });
+
+                    if (productsUpdated) {
+                        fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+                    }
+                }
             }
 
             fs.writeFileSync(filePath, JSON.stringify(invoices, null, 2));

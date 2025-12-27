@@ -93,6 +93,7 @@ interface InvoiceItem {
             <th>Invoice #</th>
             <th>Date</th>
             <th>Customer</th>
+            <th>GST Amount</th>
             <th>Total</th>
             <th>Status</th>
             <th style="width: 100px">Actions</th>
@@ -103,6 +104,7 @@ interface InvoiceItem {
             <td>{{ invoice.invoiceNumber }}</td>
             <td>{{ invoice.date | date }}</td>
             <td>{{ invoice.customerName }}</td>
+            <td>{{ invoice.taxAmount | currency:'INR' }}</td>
             <td>{{ invoice.total | currency:'INR' }}</td>
             <td>
               <span [class]="'p-tag ' + (invoice.status === 'finalized' ? 'p-tag-success' : 'p-tag-info')">
@@ -402,6 +404,20 @@ export class InvoicesComponent implements OnInit {
   onProductSelect(index: number, event: any) {
     const product = this.productList.find(p => p.id === event.value);
     if (product) {
+      if ((product.totalUnits || 0) <= 0) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Out of Stock',
+          detail: `${product.name} is currently out of stock.`
+        });
+
+        // Reset the selection for this item
+        const newItems = [...this.items()];
+        newItems[index] = { ...newItems[index], productId: undefined, productName: '', description: '', unitPrice: 0, amount: 0 };
+        this.items.set(newItems);
+        return;
+      }
+
       const newItems = [...this.items()];
       newItems[index].productName = product.name;
       newItems[index].description = product.description;
@@ -428,6 +444,7 @@ export class InvoicesComponent implements OnInit {
   }
 
   showDialog() {
+    this.loadProductsForSelection();
     this.viewMode.set(false);
     this.currentInvoiceId.set(undefined);
     this.currentInvoiceNumber = '';
