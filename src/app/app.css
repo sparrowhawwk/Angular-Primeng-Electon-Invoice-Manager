@@ -1,0 +1,14 @@
+app-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: block;
+    background-color: var(--surface-card);
+    border-bottom: 1px solid var(--surface-border);
+}
+
+.main-content {
+    /* Ensure content starts below the sticky header if needed, 
+       though sticky doesn't take element out of flow like fixed. */
+    min-height: calc(100vh - 60px);
+}

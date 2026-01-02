@@ -174,12 +174,13 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
             variant="outlined"
             severity="secondary"
           ></p-button>
-          <p-button 
-            label="Save" 
-            icon="pi pi-check" 
-            (onClick)="saveContact()"
-            *ngIf="!viewMode()"
-          ></p-button>
+          @if (!viewMode()) {
+            <p-button 
+              label="Save" 
+              icon="pi pi-check" 
+              (onClick)="saveContact()"
+            ></p-button>
+          }
         </ng-template>
       </p-dialog>
 

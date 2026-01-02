@@ -11,6 +11,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/invoices/invoices.component').then(m => m.InvoicesComponent)
     },
     {
+        path: 'purchase-orders',
+        loadComponent: () => import('./pages/purchase-orders/purchase-orders.component').then(m => m.PurchaseOrdersComponent)
+    },
+    {
         path: 'invoices/view/:id',
         loadComponent: () => import('./pages/invoices/invoice-summary.component').then(m => m.InvoiceSummaryComponent)
     },

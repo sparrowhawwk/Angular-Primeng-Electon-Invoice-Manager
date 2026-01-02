@@ -164,12 +164,13 @@ import { KeyFilterModule } from 'primeng/keyfilter';
             variant="outlined"
             severity="secondary"
           ></p-button>
-          <p-button 
-            label="Save" 
-            icon="pi pi-check" 
-            (onClick)="saveProduct()"
-            *ngIf="!viewMode()"
-          ></p-button>
+          @if (!viewMode()) {
+            <p-button 
+              label="Save" 
+              icon="pi pi-check" 
+              (onClick)="saveProduct()"
+            ></p-button>
+          }
         </ng-template>
       </p-dialog>
 

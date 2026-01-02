@@ -453,6 +453,89 @@ try {
             return { success: false, error: (error as Error).message };
         }
     });
+
+    // Purchase Order Handlers
+    ipcMain.handle('get-purchase-orders', async (event, options?: { globalFilter?: string, first?: number, rows?: number }) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const filePath = path.join(userDataPath, 'purchases.json');
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                let purchases: any[] = JSON.parse(data);
+
+                if (options?.globalFilter) {
+                    const filterValue = options.globalFilter.toLowerCase();
+                    purchases = purchases.filter(p =>
+                        (p.sellerName && p.sellerName.toLowerCase().includes(filterValue)) ||
+                        (p.sellerGst && p.sellerGst.toLowerCase().includes(filterValue)) ||
+                        (p.notes && p.notes.toLowerCase().includes(filterValue))
+                    );
+                }
+
+                const totalRecords = purchases.length;
+
+                if (options?.first !== undefined && options?.rows !== undefined) {
+                    purchases = purchases.slice(options.first, options.first + options.rows);
+                }
+
+                return { data: purchases, totalRecords };
+            }
+            return { data: [], totalRecords: 0 };
+        } catch (error) {
+            console.error('Error getting purchase orders:', error);
+            return { data: [], totalRecords: 0 };
+        }
+    });
+
+    ipcMain.handle('save-purchase-order', async (event, purchase) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            if (!fs.existsSync(userDataPath)) {
+                fs.mkdirSync(userDataPath, { recursive: true });
+            }
+            const filePath = path.join(userDataPath, 'purchases.json');
+            let purchases: any[] = [];
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                purchases = JSON.parse(data);
+            }
+
+            if (purchase.id) {
+                const index = purchases.findIndex(p => p.id === purchase.id);
+                if (index !== -1) {
+                    purchases[index] = { ...purchase };
+                } else {
+                    return { success: false, error: 'Purchase Order not found' };
+                }
+            } else {
+                purchases.push({ ...purchase, id: Date.now() });
+            }
+
+            fs.writeFileSync(filePath, JSON.stringify(purchases, null, 2));
+            return { success: true };
+        } catch (error) {
+            console.error('Error saving purchase order:', error);
+            return { success: false, error: (error as Error).message };
+        }
+    });
+
+    ipcMain.handle('delete-purchase-order', async (event, id) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const filePath = path.join(userDataPath, 'purchases.json');
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                let purchases: any[] = JSON.parse(data);
+                purchases = purchases.filter(p => p.id !== id);
+                fs.writeFileSync(filePath, JSON.stringify(purchases, null, 2));
+                return { success: true };
+            }
+            return { success: false, error: 'File not found' };
+        } catch (error) {
+            console.error('Error deleting purchase order:', error);
+            return { success: false, error: (error as Error).message };
+        }
+    });
 } catch (e) {
     console.error('Error in Electron main process:', e);
 }

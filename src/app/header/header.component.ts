@@ -25,6 +25,11 @@ export class HeaderComponent implements OnInit {
                 routerLink: '/invoices'
             },
             {
+                label: 'Purchase Order',
+                icon: 'pi pi-shopping-cart',
+                routerLink: '/purchase-orders'
+            },
+            {
                 label: 'Admin',
                 icon: 'pi pi-cog',
                 items: [

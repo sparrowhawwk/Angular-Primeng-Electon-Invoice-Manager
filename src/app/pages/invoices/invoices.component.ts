@@ -197,51 +197,56 @@ interface InvoiceItem {
           <div class="border-t pt-4">
             <div class="flex justify-between items-center mb-2">
               <h3 class="font-bold">Invoice Items</h3>
-              <p-button label="Add Item" icon="pi pi-plus" [text]="true" (onClick)="addItem()" *ngIf="!viewMode()"></p-button>
+              @if (!viewMode()) {
+                <p-button label="Add Item" icon="pi pi-plus" [text]="true" (onClick)="addItem()"></p-button>
+              }
             </div>
             
             <div class="flex flex-col gap-4">
-              <div *ngFor="let item of items(); let i = index" class="grid grid-cols-12 gap-2 items-end border-b pb-4">
-                <div class="col-span-3 flex flex-col gap-1">
-                  <label class="text-xs">Product</label>
-                  <p-select 
-                    [options]="productList" 
-                    [(ngModel)]="item.productId" 
-                    optionLabel="name" 
-                    optionValue="id"
-                    (onChange)="onProductSelect(i, $event)"
-                    placeholder="Select Product"
-                    appendTo="body"
-                    [disabled]="viewMode()"
-                  ></p-select>
+              @for (item of items(); track $index; let i = $index) {
+                <div class="grid grid-cols-12 gap-2 items-end border-b pb-4">
+                  <div class="col-span-3 flex flex-col gap-1">
+                    <label class="text-xs">Product</label>
+                    <p-select 
+                      [options]="productList" 
+                      [(ngModel)]="item.productId" 
+                      optionLabel="name" 
+                      optionValue="id"
+                      (onChange)="onProductSelect(i, $event)"
+                      placeholder="Select Product"
+                      appendTo="body"
+                      [disabled]="viewMode()"
+                    ></p-select>
+                  </div>
+                  <div class="col-span-3 flex flex-col gap-1">
+                    <label class="text-xs">Description</label>
+                    <input pInputText [ngModel]="item.description" disabled />
+                  </div>
+                  <div class="col-span-1 flex flex-col gap-1">
+                    <label class="text-xs">Qty</label>
+                    <input pInputText type="number" [(ngModel)]="item.quantity" (ngModelChange)="calculateAmount(i)" [disabled]="viewMode()" />
+                  </div>
+                  <div class="col-span-2 flex flex-col gap-1">
+                    <label class="text-xs">Unit Price</label>
+                    <input pInputText [ngModel]="item.unitPrice" disabled />
+                  </div>
+                  <div class="col-span-2 flex flex-col gap-1">
+                    <label class="text-xs">Amount</label>
+                    <input pInputText [ngModel]="item.amount | number:'1.2-2'" disabled />
+                  </div>
+                  <div class="col-span-1 flex justify-end">
+                    @if (items().length > 1 && !viewMode()) {
+                      <p-button 
+                        icon="pi pi-trash" 
+                        [rounded]="true" 
+                        [text]="true" 
+                        severity="danger" 
+                        (onClick)="removeItem(i)"
+                      ></p-button>
+                    }
+                  </div>
                 </div>
-                <div class="col-span-3 flex flex-col gap-1">
-                  <label class="text-xs">Description</label>
-                  <input pInputText [ngModel]="item.description" disabled />
-                </div>
-                <div class="col-span-1 flex flex-col gap-1">
-                  <label class="text-xs">Qty</label>
-                  <input pInputText type="number" [(ngModel)]="item.quantity" (ngModelChange)="calculateAmount(i)" [disabled]="viewMode()" />
-                </div>
-                <div class="col-span-2 flex flex-col gap-1">
-                  <label class="text-xs">Unit Price</label>
-                  <input pInputText [ngModel]="item.unitPrice" disabled />
-                </div>
-                <div class="col-span-2 flex flex-col gap-1">
-                  <label class="text-xs">Amount</label>
-                  <input pInputText [ngModel]="item.amount | number:'1.2-2'" disabled />
-                </div>
-                <div class="col-span-1 flex justify-end">
-                   <p-button 
-                    *ngIf="items().length > 1 && !viewMode()"
-                    icon="pi pi-trash" 
-                    [rounded]="true" 
-                    [text]="true" 
-                    severity="danger" 
-                    (onClick)="removeItem(i)"
-                  ></p-button>
-                </div>
-              </div>
+              }
             </div>
           </div>
 
@@ -282,31 +287,32 @@ interface InvoiceItem {
 
         <ng-template #footer>
           <div class="flex justify-end gap-2">
-            <p-button 
-              *ngIf="viewMode()"
-              label="Print" 
-              icon="pi pi-print" 
-              (onClick)="printInvoice()"
-            ></p-button>
+            @if (viewMode()) {
+              <p-button 
+                label="Print" 
+                icon="pi pi-print" 
+                (onClick)="printInvoice()"
+              ></p-button>
+            }
             <p-button 
               label="Cancel" 
               [outlined]="true" 
               severity="secondary" 
               (onClick)="displayDialog = false"
             ></p-button>
-            <p-button 
-              *ngIf="!viewMode()"
-              label="Draft" 
-              [outlined]="true" 
-              severity="secondary" 
-              (onClick)="saveInvoice('draft')"
-            ></p-button>
-            <p-button 
-              *ngIf="!viewMode()"
-              label="Finalize" 
-              icon="pi pi-check" 
-              (onClick)="saveInvoice('finalized')"
-            ></p-button>
+            @if (!viewMode()) {
+              <p-button 
+                label="Draft" 
+                [outlined]="true" 
+                severity="secondary" 
+                (onClick)="saveInvoice('draft')"
+              ></p-button>
+              <p-button 
+                label="Finalize" 
+                icon="pi pi-check" 
+                (onClick)="saveInvoice('finalized')"
+              ></p-button>
+            }
           </div>
         </ng-template>
       </p-dialog>
