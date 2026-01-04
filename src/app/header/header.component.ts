@@ -1,11 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { Menubar } from 'primeng/menubar';
+import { RouterModule } from '@angular/router';
 
 @Component({
     selector: 'app-header',
     standalone: true,
-    imports: [Menubar],
+    imports: [Menubar, RouterModule],
     templateUrl: './header.component.html',
     styleUrl: './header.component.css'
 })
@@ -15,14 +16,10 @@ export class HeaderComponent implements OnInit {
     ngOnInit() {
         this.items = [
             {
-                label: 'Dashboard',
-                icon: 'pi pi-home',
-                routerLink: '/dashboard'
-            },
-            {
                 label: 'Invoices',
                 icon: 'pi pi-file',
-                routerLink: '/invoices'
+                routerLink: '/invoices',
+                routerLinkActiveOptions: { exact: true }
             },
             {
                 label: 'Purchase Order',

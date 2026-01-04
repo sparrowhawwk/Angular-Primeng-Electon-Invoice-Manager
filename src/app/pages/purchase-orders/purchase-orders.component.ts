@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
@@ -14,6 +14,7 @@ import { PurchaseOrderService } from '../../services/purchase-order.service';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { PurchaseChartComponent } from './purchase-chart.component';
 
 @Component({
   selector: 'app-purchase-orders',
@@ -31,7 +32,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
     KeyFilterModule,
     IconFieldModule,
     InputIconModule,
-    ConfirmDialogModule
+    ConfirmDialogModule,
+    PurchaseChartComponent
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -41,6 +43,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-2xl font-bold">Purchase Orders</h2>
       </div>
+
+      <app-purchase-chart></app-purchase-chart>
 
       <p-table 
         [value]="purchaseOrders()" 
@@ -52,6 +56,10 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
         [totalRecords]="totalRecords()"
         [globalFilterFields]="['sellerName', 'sellerGst', 'notes']"
         #dt
+        filterDisplay="menu"
+        stripedRows
+        [scrollable]="true"
+        [scrollHeight]="tableHeight()"
       >
         <ng-template #caption>
           <div class="flex justify-between items-center bg-gray-50 p-4">
@@ -69,17 +77,39 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
                 type="text" 
                 (input)="dt.filterGlobal($any($event.target).value, 'contains')" 
                 placeholder="Global Search" 
+                class="p-inputtext-sm"
               />
             </p-iconfield>
           </div>
         </ng-template>
         <ng-template #header>
           <tr>
-            <th>Date</th>
-            <th>Seller Name</th>
-            <th>GSTIN</th>
-            <th>Price</th>
-            <th>Tax %</th>
+            <th pSortableColumn="purchaseDate">
+              <div class="flex items-center gap-2">
+                Date <p-sortIcon field="purchaseDate"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="sellerName">
+              <div class="flex items-center gap-2">
+                Seller Name <p-sortIcon field="sellerName"></p-sortIcon>
+                <p-columnFilter type="text" field="sellerName" display="menu" class="ml-auto"></p-columnFilter>
+              </div>
+            </th>
+            <th pSortableColumn="sellerGst">
+              <div class="flex items-center gap-2">
+                GSTIN <p-sortIcon field="sellerGst"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="price">
+              <div class="flex items-center gap-2">
+                Price <p-sortIcon field="price"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="taxPercentage">
+              <div class="flex items-center gap-2">
+                Tax % <p-sortIcon field="taxPercentage"></p-sortIcon>
+              </div>
+            </th>
             <th style="width: 100px">Actions</th>
           </tr>
         </ng-template>
@@ -228,6 +258,7 @@ export class PurchaseOrdersComponent implements OnInit {
   price = signal<any>('');
   taxPercentage = signal<any>('');
   notes = signal('');
+  tableHeight = signal<string>('500px');
 
   constructor(
     private poService: PurchaseOrderService,
@@ -236,7 +267,20 @@ export class PurchaseOrdersComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    // Initial load will be handled by p-table's onLazyLoad
+    this.calculateHeight();
+  }
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event: any) {
+    this.calculateHeight();
+  }
+
+  calculateHeight() {
+    const windowHeight = window.innerHeight;
+    // Offset for header (60), page title (60), chart (200), captions/header (120), padding (40)
+    const offset = 480;
+    const height = Math.max(300, windowHeight - offset);
+    this.tableHeight.set(`${height}px`);
   }
 
   async loadPurchaseOrders(event?: TableLazyLoadEvent) {
@@ -245,7 +289,10 @@ export class PurchaseOrdersComponent implements OnInit {
       const options = {
         globalFilter: Array.isArray(event?.globalFilter) ? event.globalFilter[0] : (event?.globalFilter as string || ''),
         first: event?.first || 0,
-        rows: event?.rows || 10
+        rows: event?.rows || 10,
+        filters: event?.filters,
+        sortField: event?.sortField as string,
+        sortOrder: event?.sortOrder as number
       };
       const response = await this.poService.getPurchaseOrders(options);
       this.purchaseOrders.set(response.data);

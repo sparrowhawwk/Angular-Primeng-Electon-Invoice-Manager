@@ -18,7 +18,7 @@ export class ContactService {
         }
     }
 
-    async getContacts(options?: { globalFilter?: string, first?: number, rows?: number }): Promise<{ data: any[], totalRecords: number }> {
+    async getContacts(options?: { globalFilter?: string, first?: number, rows?: number, filters?: any, sortField?: string, sortOrder?: number }): Promise<{ data: any[], totalRecords: number }> {
         if (!this.ipc) return Promise.resolve({ data: [], totalRecords: 0 });
         return await this.ipc.invoke('get-contacts', options);
     }

@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, computed } from '@angular/core';
+import { Component, signal, OnInit, computed, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -19,6 +19,7 @@ import { InvoiceService } from '../../services/invoice.service';
 import { ContactService } from '../../services/contact.service';
 import { InventoryService } from '../../services/inventory.service';
 import { CompanyService } from '../../services/company.service';
+import { TransactionChartComponent } from './transaction-chart.component';
 
 interface InvoiceItem {
   productId?: number;
@@ -46,7 +47,8 @@ interface InvoiceItem {
     SelectModule,
     ConfirmDialogModule,
     IconFieldModule,
-    InputIconModule
+    InputIconModule,
+    TransactionChartComponent
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -56,6 +58,8 @@ interface InvoiceItem {
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-2xl font-bold">Invoices</h2>
       </div>
+
+      <app-transaction-chart></app-transaction-chart>
 
       <p-table 
         [value]="invoices()" 
@@ -67,6 +71,10 @@ interface InvoiceItem {
         [totalRecords]="totalRecords()"
         [globalFilterFields]="['invoiceNumber', 'customerName']"
         #dt
+        filterDisplay="menu"
+        stripedRows
+        [scrollable]="true"
+        [scrollHeight]="tableHeight()"
       >
         <ng-template #caption>
           <div class="flex justify-between items-center bg-gray-50 p-4">
@@ -90,12 +98,59 @@ interface InvoiceItem {
         </ng-template>
         <ng-template #header>
           <tr>
-            <th>Invoice #</th>
-            <th>Date</th>
-            <th>Customer</th>
-            <th>GST Amount</th>
-            <th>Total</th>
-            <th>Status</th>
+            <th pSortableColumn="invoiceNumber">
+              <div class="flex items-center gap-2">
+                Invoice #
+                <p-sortIcon field="invoiceNumber"></p-sortIcon>
+                <p-columnFilter type="text" field="invoiceNumber" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false"></p-columnFilter>
+              </div>
+            </th>
+            <th pSortableColumn="date">
+              <div class="flex items-center gap-2">
+                Date
+                <p-sortIcon field="date"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="customerName">
+              <div class="flex items-center gap-2">
+                Customer
+                <p-sortIcon field="customerName"></p-sortIcon>
+                <p-columnFilter type="text" field="customerName" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false"></p-columnFilter>
+              </div>
+            </th>
+            <th pSortableColumn="subtotal">
+              <div class="flex items-center gap-2">
+                Amount
+                <p-sortIcon field="subtotal"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="taxAmount">
+              <div class="flex items-center gap-2">
+                GST Amount
+                <p-sortIcon field="taxAmount"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="total">
+              <div class="flex items-center gap-2">
+                Total
+                <p-sortIcon field="total"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="status">
+              <div class="flex items-center gap-2">
+                Status
+                <p-sortIcon field="status"></p-sortIcon>
+                <p-columnFilter field="status" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
+                  <ng-template #filter let-value let-filter="filterCallback">
+                    <p-select [ngModel]="value" [options]="statuses" (onChange)="filter($event.value)" placeholder="Any" [showClear]="true">
+                      <ng-template #item let-option>
+                        <span [class]="'p-tag ' + (option === 'finalized' ? 'p-tag-success' : 'p-tag-info')">{{ option | titlecase }}</span>
+                      </ng-template>
+                    </p-select>
+                  </ng-template>
+                </p-columnFilter>
+              </div>
+            </th>
             <th style="width: 100px">Actions</th>
           </tr>
         </ng-template>
@@ -104,6 +159,7 @@ interface InvoiceItem {
             <td>{{ invoice.invoiceNumber }}</td>
             <td>{{ invoice.date | date }}</td>
             <td>{{ invoice.customerName }}</td>
+            <td>{{ invoice.subtotal | currency:'INR' }}</td>
             <td>{{ invoice.taxAmount | currency:'INR' }}</td>
             <td>{{ invoice.total | currency:'INR' }}</td>
             <td>
@@ -224,7 +280,14 @@ interface InvoiceItem {
                   </div>
                   <div class="col-span-1 flex flex-col gap-1">
                     <label class="text-xs">Qty</label>
-                    <input pInputText type="number" [(ngModel)]="item.quantity" (ngModelChange)="calculateAmount(i)" [disabled]="viewMode()" />
+                    <input 
+                      pInputText 
+                      type="number" 
+                      [(ngModel)]="item.quantity" 
+                      (ngModelChange)="calculateAmount(i)" 
+                      [disabled]="viewMode()"
+                      [ngClass]="{'text-red-600 font-bold': isStockInsufficient(item)}"
+                    />
                   </div>
                   <div class="col-span-2 flex flex-col gap-1">
                     <label class="text-xs">Unit Price</label>
@@ -311,6 +374,7 @@ interface InvoiceItem {
                 label="Finalize" 
                 icon="pi pi-check" 
                 (onClick)="saveInvoice('finalized')"
+                [disabled]="!isInvoiceValid()"
               ></p-button>
             }
           </div>
@@ -333,6 +397,7 @@ export class InvoicesComponent implements OnInit {
   viewMode = signal(false);
   currentInvoiceId = signal<number | undefined>(undefined);
   currentInvoiceNumber = '';
+  tableHeight = signal<string>('500px');
 
   // Form Fields
   invoiceDate = new Date();
@@ -345,6 +410,7 @@ export class InvoicesComponent implements OnInit {
 
   taxTypes = ['GST', 'IGST'];
   taxRates = Array.from({ length: 31 }, (_, i) => 3 + i * 0.5);
+  statuses = ['draft', 'finalized'];
 
   // Suggestions
   filteredContacts: any[] = [];
@@ -361,6 +427,26 @@ export class InvoicesComponent implements OnInit {
   taxAmount = computed(() => this.subtotal() * (this.taxRate() / 100));
   total = computed(() => this.subtotal() + this.taxAmount());
 
+  isInvoiceValid = computed(() => {
+    if (!this.selectedCustomer()) return false;
+    if (this.items().length === 0) return false;
+
+    return this.items().every(item => {
+      if (!item.productId || item.quantity <= 0) return false;
+
+      const product = this.productList.find(p => p.id === item.productId);
+      const stock = product?.totalUnits || 0;
+      return item.quantity <= stock;
+    });
+  });
+
+  isStockInsufficient(item: InvoiceItem): boolean {
+    if (!item.productId) return false;
+    const product = this.productList.find(p => p.id === item.productId);
+    if (!product) return false;
+    return item.quantity > (product.totalUnits || 0);
+  }
+
   constructor(
     private invoiceService: InvoiceService,
     private contactService: ContactService,
@@ -373,6 +459,20 @@ export class InvoicesComponent implements OnInit {
 
   ngOnInit() {
     this.loadProductsForSelection();
+    this.calculateHeight();
+  }
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event: any) {
+    this.calculateHeight();
+  }
+
+  calculateHeight() {
+    const windowHeight = window.innerHeight;
+    // Offset for header (60), page title (60), chart (200), table header/caption (100), margin/padding
+    const offset = 480;
+    const height = Math.max(300, windowHeight - offset);
+    this.tableHeight.set(`${height}px`);
   }
 
   async loadInvoices(event?: TableLazyLoadEvent) {
@@ -381,7 +481,10 @@ export class InvoicesComponent implements OnInit {
       const options = {
         globalFilter: Array.isArray(event?.globalFilter) ? event.globalFilter[0] : (event?.globalFilter as string || ''),
         first: event?.first || 0,
-        rows: event?.rows || 10
+        rows: event?.rows || 10,
+        filters: event?.filters,
+        sortField: event?.sortField as string,
+        sortOrder: event?.sortOrder as number
       };
       const response = await this.invoiceService.getInvoices(options);
       this.invoices.set(response.data);
@@ -410,7 +513,8 @@ export class InvoicesComponent implements OnInit {
   onProductSelect(index: number, event: any) {
     const product = this.productList.find(p => p.id === event.value);
     if (product) {
-      if ((product.totalUnits || 0) <= 0) {
+      const stock = product.totalUnits || 0;
+      if (stock <= 0) {
         this.messageService.add({
           severity: 'warn',
           summary: 'Out of Stock',
@@ -425,6 +529,16 @@ export class InvoicesComponent implements OnInit {
       }
 
       const newItems = [...this.items()];
+      const currentQty = newItems[index].quantity || 1;
+
+      if (currentQty > stock) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Stock Limit',
+          detail: `Only ${stock} units available for ${product.name}.`
+        });
+      }
+
       newItems[index].productName = product.name;
       newItems[index].description = product.description;
       newItems[index].unitPrice = product.unitPrice;
@@ -445,6 +559,21 @@ export class InvoicesComponent implements OnInit {
 
   calculateAmount(index: number) {
     const newItems = [...this.items()];
+    const item = newItems[index];
+
+    if (item.productId) {
+      const product = this.productList.find(p => p.id === item.productId);
+      const stock = product?.totalUnits || 0;
+
+      if (item.quantity > stock) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Insufficient Stock',
+          detail: `Cannot exceed available stock (Max: ${stock} units).`
+        });
+      }
+    }
+
     newItems[index].amount = newItems[index].quantity * newItems[index].unitPrice;
     this.items.set(newItems);
   }

@@ -143,7 +143,7 @@ try {
     // Move IPC handlers into app.on('ready') block or ensure they are registered early
     // Actually, top level is usually fine, but let's add a log that they are registered.
     console.log('Main: IPC handlers registered');
-    ipcMain.handle('get-contacts', async (event, options?: { globalFilter?: string, first?: number, rows?: number }) => {
+    ipcMain.handle('get-contacts', async (event, options?: { globalFilter?: string, first?: number, rows?: number, filters?: any, sortField?: string, sortOrder?: number }) => {
         try {
             const userDataPath = app.getPath('userData');
             const filePath = path.join(userDataPath, 'contacts.json');
@@ -151,7 +151,7 @@ try {
                 const data = fs.readFileSync(filePath, 'utf-8');
                 let contacts: any[] = JSON.parse(data);
 
-                // filtering
+                // Global filtering
                 if (options?.globalFilter) {
                     const filterValue = options.globalFilter.toLowerCase();
                     contacts = contacts.filter(c =>
@@ -160,6 +160,49 @@ try {
                         (c.phone && c.phone.toLowerCase().includes(filterValue)) ||
                         (c.gstin && c.gstin.toLowerCase().includes(filterValue))
                     );
+                }
+
+                // Column filtering
+                if (options?.filters) {
+                    Object.keys(options.filters).forEach(field => {
+                        const filterConstraint = options.filters[field];
+                        const constraints = Array.isArray(filterConstraint) ? filterConstraint : [filterConstraint];
+                        constraints.forEach(constraint => {
+                            if (constraint && constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
+                                const filterValue = String(constraint.value).toLowerCase();
+                                contacts = contacts.filter(item => {
+                                    const itemValue = item[field] ? String(item[field]).toLowerCase() : '';
+                                    switch (constraint.matchMode) {
+                                        case 'contains': return itemValue.indexOf(filterValue) !== -1;
+                                        case 'equals': case 'is': return itemValue === filterValue;
+                                        case 'startsWith': return itemValue.startsWith(filterValue);
+                                        case 'endsWith': return itemValue.endsWith(filterValue);
+                                        default: return itemValue.indexOf(filterValue) !== -1;
+                                    }
+                                });
+                            }
+                        });
+                    });
+                }
+
+                // Sorting
+                if (options?.sortField) {
+                    const field = options.sortField;
+                    const order = options.sortOrder || 1;
+                    contacts.sort((a, b) => {
+                        const valA = a[field];
+                        const valB = b[field];
+                        if (valA === valB) return 0;
+                        if (valA === null || valA === undefined) return 1;
+                        if (valB === null || valB === undefined) return -1;
+                        let result = 0;
+                        if (typeof valA === 'string' && typeof valB === 'string') {
+                            result = valA.localeCompare(valB);
+                        } else {
+                            result = valA < valB ? -1 : 1;
+                        }
+                        return result * order;
+                    });
                 }
 
                 const totalRecords = contacts.length;
@@ -231,7 +274,7 @@ try {
     });
 
     // Inventory Handlers
-    ipcMain.handle('get-products', async (event, options?: { globalFilter?: string, first?: number, rows?: number }) => {
+    ipcMain.handle('get-products', async (event, options?: { globalFilter?: string, first?: number, rows?: number, filters?: any, sortField?: string, sortOrder?: number }) => {
         try {
             const userDataPath = app.getPath('userData');
             const filePath = path.join(userDataPath, 'products.json');
@@ -239,12 +282,56 @@ try {
                 const data = fs.readFileSync(filePath, 'utf-8');
                 let products: any[] = JSON.parse(data);
 
+                // Global filtering
                 if (options?.globalFilter) {
                     const filterValue = options.globalFilter.toLowerCase();
                     products = products.filter(p =>
                         (p.name && p.name.toLowerCase().includes(filterValue)) ||
                         (p.description && p.description.toLowerCase().includes(filterValue))
                     );
+                }
+
+                // Column filtering
+                if (options?.filters) {
+                    Object.keys(options.filters).forEach(field => {
+                        const filterConstraint = options.filters[field];
+                        const constraints = Array.isArray(filterConstraint) ? filterConstraint : [filterConstraint];
+                        constraints.forEach(constraint => {
+                            if (constraint && constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
+                                const filterValue = String(constraint.value).toLowerCase();
+                                products = products.filter(item => {
+                                    const itemValue = item[field] ? String(item[field]).toLowerCase() : '';
+                                    switch (constraint.matchMode) {
+                                        case 'contains': return itemValue.indexOf(filterValue) !== -1;
+                                        case 'equals': case 'is': return itemValue === filterValue;
+                                        case 'startsWith': return itemValue.startsWith(filterValue);
+                                        case 'endsWith': return itemValue.endsWith(filterValue);
+                                        default: return itemValue.indexOf(filterValue) !== -1;
+                                    }
+                                });
+                            }
+                        });
+                    });
+                }
+
+                // Sorting
+                if (options?.sortField) {
+                    const field = options.sortField;
+                    const order = options.sortOrder || 1;
+                    products.sort((a, b) => {
+                        const valA = a[field];
+                        const valB = b[field];
+                        if (valA === valB) return 0;
+                        if (valA === null || valA === undefined) return 1;
+                        if (valB === null || valB === undefined) return -1;
+                        let result = 0;
+                        if (typeof valA === 'string' && typeof valB === 'string') {
+                            result = valA.localeCompare(valB);
+                        } else {
+                            result = valA < valB ? -1 : 1;
+                        }
+                        return result * order;
+                    });
                 }
 
                 const totalRecords = products.length;
@@ -313,7 +400,7 @@ try {
     });
 
     // Invoice Handlers
-    ipcMain.handle('get-invoices', async (event, options?: { globalFilter?: string, first?: number, rows?: number }) => {
+    ipcMain.handle('get-invoices', async (event, options?: { globalFilter?: string, first?: number, rows?: number, filters?: any, sortField?: string, sortOrder?: number }) => {
         try {
             const userDataPath = app.getPath('userData');
             const filePath = path.join(userDataPath, 'invoices.json');
@@ -321,12 +408,66 @@ try {
                 const data = fs.readFileSync(filePath, 'utf-8');
                 let invoices: any[] = JSON.parse(data);
 
+                // Global filtering
                 if (options?.globalFilter) {
                     const filterValue = options.globalFilter.toLowerCase();
                     invoices = invoices.filter(inv =>
                         (inv.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(filterValue)) ||
                         (inv.customerName && inv.customerName.toLowerCase().includes(filterValue))
                     );
+                }
+
+                // Column filtering
+                if (options?.filters) {
+                    Object.keys(options.filters).forEach(field => {
+                        const filterConstraint = options.filters[field];
+                        const constraints = Array.isArray(filterConstraint) ? filterConstraint : [filterConstraint];
+
+                        constraints.forEach(constraint => {
+                            if (constraint && constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
+                                const filterValue = String(constraint.value).toLowerCase();
+                                invoices = invoices.filter(inv => {
+                                    const itemValue = inv[field] ? String(inv[field]).toLowerCase() : '';
+                                    switch (constraint.matchMode) {
+                                        case 'contains':
+                                            return itemValue.indexOf(filterValue) !== -1;
+                                        case 'equals':
+                                        case 'is':
+                                            return itemValue === filterValue;
+                                        case 'startsWith':
+                                            return itemValue.startsWith(filterValue);
+                                        case 'endsWith':
+                                            return itemValue.endsWith(filterValue);
+                                        default:
+                                            // Fallback for simple values
+                                            return itemValue.indexOf(filterValue) !== -1;
+                                    }
+                                });
+                            }
+                        });
+                    });
+                }
+
+                // Sorting
+                if (options?.sortField) {
+                    const field = options.sortField;
+                    const order = options.sortOrder || 1;
+                    invoices.sort((a, b) => {
+                        const valA = a[field];
+                        const valB = b[field];
+
+                        if (valA === valB) return 0;
+                        if (valA === null || valA === undefined) return 1;
+                        if (valB === null || valB === undefined) return -1;
+
+                        let result = 0;
+                        if (typeof valA === 'string' && typeof valB === 'string') {
+                            result = valA.localeCompare(valB);
+                        } else {
+                            result = valA < valB ? -1 : 1;
+                        }
+                        return result * order;
+                    });
                 }
 
                 const totalRecords = invoices.length;
@@ -455,7 +596,7 @@ try {
     });
 
     // Purchase Order Handlers
-    ipcMain.handle('get-purchase-orders', async (event, options?: { globalFilter?: string, first?: number, rows?: number }) => {
+    ipcMain.handle('get-purchase-orders', async (event, options?: { globalFilter?: string, first?: number, rows?: number, filters?: any, sortField?: string, sortOrder?: number }) => {
         try {
             const userDataPath = app.getPath('userData');
             const filePath = path.join(userDataPath, 'purchases.json');
@@ -463,6 +604,7 @@ try {
                 const data = fs.readFileSync(filePath, 'utf-8');
                 let purchases: any[] = JSON.parse(data);
 
+                // Global filtering
                 if (options?.globalFilter) {
                     const filterValue = options.globalFilter.toLowerCase();
                     purchases = purchases.filter(p =>
@@ -470,6 +612,49 @@ try {
                         (p.sellerGst && p.sellerGst.toLowerCase().includes(filterValue)) ||
                         (p.notes && p.notes.toLowerCase().includes(filterValue))
                     );
+                }
+
+                // Column filtering
+                if (options?.filters) {
+                    Object.keys(options.filters).forEach(field => {
+                        const filterConstraint = options.filters[field];
+                        const constraints = Array.isArray(filterConstraint) ? filterConstraint : [filterConstraint];
+                        constraints.forEach(constraint => {
+                            if (constraint && constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
+                                const filterValue = String(constraint.value).toLowerCase();
+                                purchases = purchases.filter(item => {
+                                    const itemValue = item[field] ? String(item[field]).toLowerCase() : '';
+                                    switch (constraint.matchMode) {
+                                        case 'contains': return itemValue.indexOf(filterValue) !== -1;
+                                        case 'equals': case 'is': return itemValue === filterValue;
+                                        case 'startsWith': return itemValue.startsWith(filterValue);
+                                        case 'endsWith': return itemValue.endsWith(filterValue);
+                                        default: return itemValue.indexOf(filterValue) !== -1;
+                                    }
+                                });
+                            }
+                        });
+                    });
+                }
+
+                // Sorting
+                if (options?.sortField) {
+                    const field = options.sortField;
+                    const order = options.sortOrder || 1;
+                    purchases.sort((a, b) => {
+                        const valA = a[field];
+                        const valB = b[field];
+                        if (valA === valB) return 0;
+                        if (valA === null || valA === undefined) return 1;
+                        if (valB === null || valB === undefined) return -1;
+                        let result = 0;
+                        if (typeof valA === 'string' && typeof valB === 'string') {
+                            result = valA.localeCompare(valB);
+                        } else {
+                            result = valA < valB ? -1 : 1;
+                        }
+                        return result * order;
+                    });
                 }
 
                 const totalRecords = purchases.length;

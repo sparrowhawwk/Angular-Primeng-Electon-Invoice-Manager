@@ -18,7 +18,7 @@ export class InvoiceService {
         }
     }
 
-    async getInvoices(options?: { globalFilter?: string, first?: number, rows?: number }): Promise<{ data: any[], totalRecords: number }> {
+    async getInvoices(options?: { globalFilter?: string, first?: number, rows?: number, filters?: any, sortField?: string, sortOrder?: number }): Promise<{ data: any[], totalRecords: number }> {
         if (!this.ipc) return Promise.resolve({ data: [], totalRecords: 0 });
         return await this.ipc.invoke('get-invoices', options);
     }

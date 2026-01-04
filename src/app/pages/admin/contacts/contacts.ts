@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
@@ -48,6 +48,10 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
         [totalRecords]="totalRecords()"
         [globalFilterFields]="['name', 'email', 'phone', 'gstin']"
         #dt
+        stripedRows
+        [scrollable]="true"
+        [scrollHeight]="tableHeight()"
+        filterDisplay="menu"
       >
         <ng-template #caption>
           <div class="flex justify-between items-center bg-gray-50 p-4">
@@ -65,16 +69,35 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
                 type="text" 
                 (input)="dt.filterGlobal($any($event.target).value, 'contains')" 
                 placeholder="Global Search" 
+                class="p-inputtext-sm"
               />
             </p-iconfield>
           </div>
         </ng-template>
         <ng-template #header>
           <tr>
-            <th>Name</th>
-            <th>Phone</th>
-            <th>Email</th>
-            <th>GSTIN</th>
+            <th pSortableColumn="name">
+              <div class="flex items-center gap-2">
+                Name <p-sortIcon field="name"></p-sortIcon>
+                <p-columnFilter type="text" field="name" display="menu" class="ml-auto"></p-columnFilter>
+              </div>
+            </th>
+            <th pSortableColumn="phone">
+              <div class="flex items-center gap-2">
+                Phone <p-sortIcon field="phone"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="email">
+              <div class="flex items-center gap-2">
+                Email <p-sortIcon field="email"></p-sortIcon>
+                <p-columnFilter type="text" field="email" display="menu" class="ml-auto"></p-columnFilter>
+              </div>
+            </th>
+            <th pSortableColumn="gstin">
+              <div class="flex items-center gap-2">
+                GSTIN <p-sortIcon field="gstin"></p-sortIcon>
+              </div>
+            </th>
             <th style="width: 100px">Actions</th>
           </tr>
         </ng-template>
@@ -219,6 +242,7 @@ export class ContactsComponent implements OnInit {
   totalRecords = signal(0);
   displayDialog = false;
   viewMode = signal(false);
+  tableHeight = signal<string>('500px');
 
   contactForm = signal({
     id: undefined as number | undefined,
@@ -237,7 +261,20 @@ export class ContactsComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    // Initial load will be handled by p-table's onLazyLoad
+    this.calculateHeight();
+  }
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event: any) {
+    this.calculateHeight();
+  }
+
+  calculateHeight() {
+    const windowHeight = window.innerHeight;
+    // Offset for header (60), page title (60), captions/header (120), padding (40)
+    const offset = 280;
+    const height = Math.max(300, windowHeight - offset);
+    this.tableHeight.set(`${height}px`);
   }
 
   async loadContacts(event?: TableLazyLoadEvent) {
@@ -246,7 +283,10 @@ export class ContactsComponent implements OnInit {
       const options = {
         globalFilter: Array.isArray(event?.globalFilter) ? event.globalFilter[0] : (event?.globalFilter as string || ''),
         first: event?.first || 0,
-        rows: event?.rows || 10
+        rows: event?.rows || 10,
+        filters: event?.filters,
+        sortField: event?.sortField as string,
+        sortOrder: event?.sortOrder as number
       };
       const response = await this.contactService.getContacts(options);
       this.contacts.set(response.data);

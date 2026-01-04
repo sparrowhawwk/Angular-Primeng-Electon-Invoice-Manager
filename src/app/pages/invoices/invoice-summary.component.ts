@@ -139,7 +139,16 @@ import { ContactService } from '../../services/contact.service';
       @media print {
         .no-print { display: none !important; }
         .bg-white { border: none !important; box-shadow: none !important; padding: 0 !important; }
-        body { background: white !important; }
+        body { background: white !important; font-size: 10pt; }
+        #invoice-bill { padding: 30px !important; border: none !important; }
+        .text-4xl { font-size: 24pt !important; }
+        .text-xl { font-size: 14pt !important; }
+        .text-lg { font-size: 12pt !important; }
+        .p-4 { padding: 8px !important; }
+        table th, table td { padding: 8px !important; font-size: 9pt; }
+        .mt-20 { margin-top: 20px !important; }
+        .mt-16 { margin-top: 20px !important; }
+        .mb-12 { margin-bottom: 20px !important; }
       }
     </style>
   `

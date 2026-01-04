@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
@@ -13,6 +13,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { KeyFilterModule } from 'primeng/keyfilter';
+import { InventoryChartComponent } from './inventory-chart.component';
 
 @Component({
   selector: 'app-inventory',
@@ -29,7 +30,8 @@ import { KeyFilterModule } from 'primeng/keyfilter';
     IconFieldModule,
     InputIconModule,
     ConfirmDialogModule,
-    KeyFilterModule
+    KeyFilterModule,
+    InventoryChartComponent
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -39,6 +41,8 @@ import { KeyFilterModule } from 'primeng/keyfilter';
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-2xl font-bold">Inventory Management</h2>
       </div>
+
+      <app-inventory-chart></app-inventory-chart>
 
       <p-table 
         [value]="products()" 
@@ -50,6 +54,10 @@ import { KeyFilterModule } from 'primeng/keyfilter';
         [totalRecords]="totalRecords()"
         [globalFilterFields]="['name', 'description']"
         #dt
+        filterDisplay="menu"
+        stripedRows
+        [scrollable]="true"
+        [scrollHeight]="tableHeight()"
       >
         <ng-template #caption>
           <div class="flex justify-between items-center bg-gray-50 p-4">
@@ -67,16 +75,34 @@ import { KeyFilterModule } from 'primeng/keyfilter';
                 type="text" 
                 (input)="dt.filterGlobal($any($event.target).value, 'contains')" 
                 placeholder="Global Search" 
+                class="p-inputtext-sm"
               />
             </p-iconfield>
           </div>
         </ng-template>
         <ng-template #header>
           <tr>
-            <th>Name</th>
-            <th>Description</th>
-            <th>Total Units</th>
-            <th>Unit Price</th>
+            <th pSortableColumn="name">
+              <div class="flex items-center gap-2">
+                Name <p-sortIcon field="name"></p-sortIcon>
+                <p-columnFilter type="text" field="name" display="menu" class="ml-auto"></p-columnFilter>
+              </div>
+            </th>
+            <th pSortableColumn="description">
+              <div class="flex items-center gap-2">
+                Description <p-sortIcon field="description"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="totalUnits">
+              <div class="flex items-center gap-2">
+                Total Units <p-sortIcon field="totalUnits"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="unitPrice">
+              <div class="flex items-center gap-2">
+                Unit Price <p-sortIcon field="unitPrice"></p-sortIcon>
+              </div>
+            </th>
             <th style="width: 100px">Actions</th>
           </tr>
         </ng-template>
@@ -215,6 +241,7 @@ export class InventoryComponent implements OnInit {
   productTotalUnits = signal<any>('');
   productUnitPrice = signal<any>('');
   currentProductId = signal<number | undefined>(undefined);
+  tableHeight = signal<string>('500px');
 
   constructor(
     private inventoryService: InventoryService,
@@ -223,6 +250,20 @@ export class InventoryComponent implements OnInit {
   ) { }
 
   ngOnInit() {
+    this.calculateHeight();
+  }
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event: any) {
+    this.calculateHeight();
+  }
+
+  calculateHeight() {
+    const windowHeight = window.innerHeight;
+    // Offset for header (60), page title (60), chart (200), captions/header (120), padding (40)
+    const offset = 480;
+    const height = Math.max(300, windowHeight - offset);
+    this.tableHeight.set(`${height}px`);
   }
 
   async loadProducts(event?: TableLazyLoadEvent) {
@@ -231,7 +272,10 @@ export class InventoryComponent implements OnInit {
       const options = {
         globalFilter: Array.isArray(event?.globalFilter) ? event.globalFilter[0] : (event?.globalFilter as string || ''),
         first: event?.first || 0,
-        rows: event?.rows || 10
+        rows: event?.rows || 10,
+        filters: event?.filters,
+        sortField: event?.sortField as string,
+        sortOrder: event?.sortOrder as number
       };
       const response = await this.inventoryService.getProducts(options);
       this.products.set(response.data);

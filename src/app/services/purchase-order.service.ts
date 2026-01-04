@@ -18,7 +18,7 @@ export class PurchaseOrderService {
         }
     }
 
-    async getPurchaseOrders(options?: { globalFilter?: string, first?: number, rows?: number }): Promise<{ data: any[], totalRecords: number }> {
+    async getPurchaseOrders(options?: { globalFilter?: string, first?: number, rows?: number, filters?: any, sortField?: string, sortOrder?: number }): Promise<{ data: any[], totalRecords: number }> {
         return await this.ipcRenderer.invoke('get-purchase-orders', options);
     }
 
