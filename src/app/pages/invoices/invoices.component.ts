@@ -258,46 +258,36 @@ interface InvoiceItem {
               }
             </div>
             
-            <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-6">
               @for (item of items(); track $index; let i = $index) {
-                <div class="grid grid-cols-12 gap-2 items-end border-b pb-4">
-                  <div class="col-span-3 flex flex-col gap-1">
-                    <label class="text-xs">Product</label>
-                    <p-select 
-                      [options]="productList" 
-                      [(ngModel)]="item.productId" 
-                      optionLabel="name" 
-                      optionValue="id"
-                      (onChange)="onProductSelect(i, $event)"
-                      placeholder="Select Product"
-                      appendTo="body"
-                      [disabled]="viewMode()"
-                    ></p-select>
-                  </div>
-                  <div class="col-span-3 flex flex-col gap-1">
-                    <label class="text-xs">Description</label>
-                    <input pInputText [ngModel]="item.description" disabled />
-                  </div>
-                  <div class="col-span-1 flex flex-col gap-1">
-                    <label class="text-xs">Qty</label>
-                    <input 
-                      pInputText 
-                      type="number" 
-                      [(ngModel)]="item.quantity" 
-                      (ngModelChange)="calculateAmount(i)" 
-                      [disabled]="viewMode()"
-                      [ngClass]="{'text-red-600 font-bold': isStockInsufficient(item)}"
-                    />
-                  </div>
-                  <div class="col-span-2 flex flex-col gap-1">
-                    <label class="text-xs">Unit Price</label>
-                    <input pInputText [ngModel]="item.unitPrice" disabled />
-                  </div>
-                  <div class="col-span-2 flex flex-col gap-1">
-                    <label class="text-xs">Amount</label>
-                    <input pInputText [ngModel]="item.amount | number:'1.2-2'" disabled />
-                  </div>
-                  <div class="col-span-1 flex justify-end">
+                <div class="flex flex-col gap-3 border-b pb-4">
+                  <!-- Row 1: Product Selection -->
+                  <div class="flex items-end gap-4">
+                    <div class="flex-1 flex flex-col gap-1">
+                      <label class="text-xs font-semibold">Product</label>
+                      <p-select 
+                        [options]="productList" 
+                        [(ngModel)]="item.productId" 
+                        optionLabel="name" 
+                        optionValue="id"
+                        (onChange)="onProductSelect(i, $event)"
+                        placeholder="Select Product"
+                        appendTo="body"
+                        [disabled]="viewMode()"
+                        [filter]="true"
+                        filterBy="name,description"
+                        [virtualScroll]="true"
+                        [virtualScrollItemSize]="44"
+                        [style]="{width: '100%'}"
+                      >
+                        <ng-template #item let-product>
+                          <div class="flex flex-col">
+                            <span class="font-medium">{{product?.name}}</span>
+                            <span class="text-xs text-gray-500 truncate" style="max-width: 400px;">{{product?.description}}</span>
+                          </div>
+                        </ng-template>
+                      </p-select>
+                    </div>
                     @if (items().length > 1 && !viewMode()) {
                       <p-button 
                         icon="pi pi-trash" 
@@ -307,6 +297,42 @@ interface InvoiceItem {
                         (onClick)="removeItem(i)"
                       ></p-button>
                     }
+                  </div>
+
+                  <!-- Row 2: Details -->
+                  <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-5 flex flex-col gap-1">
+                      <label class="text-xs text-gray-500">Description</label>
+                      <input pInputText [ngModel]="item.description" disabled placeholder="Product description..." class="w-full bg-gray-50" />
+                    </div>
+                    <div class="col-span-2 flex flex-col gap-1">
+                      <label class="text-xs text-gray-500">Qty</label>
+                      <input 
+                        pInputText 
+                        type="number" 
+                        [(ngModel)]="item.quantity" 
+                        (ngModelChange)="calculateAmount(i)" 
+                        [disabled]="viewMode()"
+                        [ngClass]="{'text-red-600 font-bold border-red-500': isStockInsufficient(item)}"
+                        min="1"
+                        max="999999"
+                        class="w-full"
+                      />
+                    </div>
+                    <div class="col-span-2 flex flex-col gap-1">
+                      <label class="text-xs text-gray-500">Unit Price</label>
+                      <div class="relative">
+                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">₹</span>
+                        <input pInputText [ngModel]="item.unitPrice | number:'1.2-2'" disabled class="w-full pl-6 bg-gray-50 text-right" />
+                      </div>
+                    </div>
+                    <div class="col-span-3 flex flex-col gap-1">
+                      <label class="text-xs text-gray-500">Amount</label>
+                      <div class="relative">
+                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">₹</span>
+                        <input pInputText [ngModel]="item.amount | number:'1.2-2'" disabled class="w-full pl-6 bg-gray-50 text-right font-bold text-primary" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               }
