@@ -85,6 +85,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
             <th pSortableColumn="phone">
               <div class="flex items-center gap-2">
                 Phone <p-sortIcon field="phone"></p-sortIcon>
+                <p-columnFilter type="text" field="phone" display="menu" class="ml-auto"></p-columnFilter>
               </div>
             </th>
             <th pSortableColumn="email">
@@ -96,6 +97,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
             <th pSortableColumn="gstin">
               <div class="flex items-center gap-2">
                 GSTIN <p-sortIcon field="gstin"></p-sortIcon>
+                <p-columnFilter type="text" field="gstin" display="menu" class="ml-auto"></p-columnFilter>
               </div>
             </th>
             <th style="width: 100px">Actions</th>

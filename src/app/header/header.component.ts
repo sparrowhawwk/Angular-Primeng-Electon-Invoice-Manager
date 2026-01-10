@@ -27,6 +27,11 @@ export class HeaderComponent implements OnInit {
                 routerLink: '/purchase-orders'
             },
             {
+                label: 'Balance Sheet',
+                icon: 'pi pi-chart-bar',
+                routerLink: '/balance-sheet'
+            },
+            {
                 label: 'Admin',
                 icon: 'pi pi-cog',
                 items: [

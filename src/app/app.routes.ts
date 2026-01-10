@@ -27,6 +27,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin/inventory/inventory').then(m => m.InventoryComponent)
     },
     {
+        path: 'balance-sheet',
+        loadComponent: () => import('./pages/balance-sheet/balance-sheet.component').then(m => m.BalanceSheetComponent)
+    },
+    {
         path: 'settings',
         loadComponent: () => import('./pages/settings/settings.component').then(m => m.SettingsComponent)
     },

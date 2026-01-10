@@ -14,6 +14,8 @@ import { PurchaseOrderService } from '../../services/purchase-order.service';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { TagModule } from 'primeng/tag';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { PurchaseChartComponent } from './purchase-chart.component';
 
 @Component({
@@ -33,7 +35,9 @@ import { PurchaseChartComponent } from './purchase-chart.component';
     IconFieldModule,
     InputIconModule,
     ConfirmDialogModule,
-    PurchaseChartComponent
+    PurchaseChartComponent,
+    TagModule,
+    SelectButtonModule
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -110,6 +114,16 @@ import { PurchaseChartComponent } from './purchase-chart.component';
                 Tax % <p-sortIcon field="taxPercentage"></p-sortIcon>
               </div>
             </th>
+            <th pSortableColumn="status">
+              <div class="flex items-center gap-2">
+                Status <p-sortIcon field="status"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="paymentDate">
+              <div class="flex items-center gap-2">
+                Paid On <p-sortIcon field="paymentDate"></p-sortIcon>
+              </div>
+            </th>
             <th style="width: 100px">Actions</th>
           </tr>
         </ng-template>
@@ -120,6 +134,10 @@ import { PurchaseChartComponent } from './purchase-chart.component';
             <td>{{ po.sellerGst }}</td>
             <td>{{ po.price | currency:'INR' }}</td>
             <td>{{ po.taxPercentage }}%</td>
+            <td>
+              <p-tag [value]="po.status === 'paid' ? 'Paid' : 'Unpaid'" [severity]="po.status === 'paid' ? 'success' : 'warn'"></p-tag>
+            </td>
+            <td>{{ (po.status === 'paid' ? po.paymentDate : null) | date:'mediumDate' }}</td>
             <td>
               <div class="flex gap-2">
                 <p-button 
@@ -192,6 +210,32 @@ import { PurchaseChartComponent } from './purchase-chart.component';
                 <input pInputText id="taxPercentage" pKeyFilter="num" [ngModel]="taxPercentage()" (ngModelChange)="taxPercentage.set($event)" />
             </div>
 
+            <!-- Status -->
+            <div class="flex flex-col gap-2">
+                <label for="status" class="font-medium">Payment Status</label>
+                <p-selectButton 
+                    [options]="statusOptions" 
+                    [ngModel]="status()" 
+                    (ngModelChange)="status.set($event)" 
+                    optionLabel="label" 
+                    optionValue="value"
+                ></p-selectButton>
+            </div>
+
+            <!-- Payment Date -->
+            <div class="flex flex-col gap-2">
+                <label for="paymentDate" class="font-medium">Paid On Date</label>
+                <p-datepicker 
+                    id="paymentDate" 
+                    [ngModel]="paymentDate()" 
+                    (ngModelChange)="paymentDate.set($event)" 
+                    [showIcon]="true" 
+                    appendTo="body"
+                    [disabled]="status() !== 'paid'"
+                    placeholder="Select Date"
+                ></p-datepicker>
+            </div>
+
             <!-- Notes (optional) -->
             <div class="flex flex-col gap-2 col-span-2 mt-2">
                 <h3 class="text-lg font-semibold mb-2">Notes (optional)</h3>
@@ -257,8 +301,15 @@ export class PurchaseOrdersComponent implements OnInit {
   sellerGst = signal('');
   price = signal<any>('');
   taxPercentage = signal<any>('');
+  status = signal('unpaid');
+  paymentDate = signal<Date | null>(null);
   notes = signal('');
   tableHeight = signal<string>('500px');
+
+  statusOptions = [
+    { label: 'Paid', value: 'paid' },
+    { label: 'Unpaid', value: 'unpaid' }
+  ];
 
   constructor(
     private poService: PurchaseOrderService,
@@ -311,6 +362,8 @@ export class PurchaseOrdersComponent implements OnInit {
     this.sellerGst.set('');
     this.price.set('');
     this.taxPercentage.set('');
+    this.status.set('unpaid');
+    this.paymentDate.set(null);
     this.notes.set('');
     this.displayDialog = true;
   }
@@ -322,6 +375,8 @@ export class PurchaseOrdersComponent implements OnInit {
     this.sellerGst.set(po.sellerGst || '');
     this.price.set(po.price || '');
     this.taxPercentage.set(po.taxPercentage || '');
+    this.status.set(po.status || 'unpaid');
+    this.paymentDate.set(po.paymentDate ? new Date(po.paymentDate) : null);
     this.notes.set(po.notes || '');
     this.displayDialog = true;
   }
@@ -339,6 +394,8 @@ export class PurchaseOrdersComponent implements OnInit {
       sellerGst: this.sellerGst(),
       price: this.price(),
       taxPercentage: this.taxPercentage(),
+      status: this.status(),
+      paymentDate: this.paymentDate(),
       notes: this.notes()
     };
 

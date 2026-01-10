@@ -151,9 +151,21 @@ try {
                 const data = fs.readFileSync(filePath, 'utf-8');
                 let contacts: any[] = JSON.parse(data);
 
-                // Global filtering
-                if (options?.globalFilter) {
-                    const filterValue = options.globalFilter.toLowerCase();
+                // Extract and search global filter
+                let globalFilterValue = options?.globalFilter || '';
+                if (options?.filters?.global) {
+                    const globalMeta = options.filters.global;
+                    if (Array.isArray(globalMeta)) {
+                        globalFilterValue = globalMeta[0]?.value || globalFilterValue;
+                    } else if (globalMeta.constraints) {
+                        globalFilterValue = globalMeta.constraints[0]?.value || globalFilterValue;
+                    } else {
+                        globalFilterValue = globalMeta.value || globalFilterValue;
+                    }
+                }
+
+                if (globalFilterValue) {
+                    const filterValue = String(globalFilterValue).toLowerCase();
                     contacts = contacts.filter(c =>
                         (c.name && c.name.toLowerCase().includes(filterValue)) ||
                         (c.email && c.email.toLowerCase().includes(filterValue)) ||
@@ -165,10 +177,21 @@ try {
                 // Column filtering
                 if (options?.filters) {
                     Object.keys(options.filters).forEach(field => {
-                        const filterConstraint = options.filters[field];
-                        const constraints = Array.isArray(filterConstraint) ? filterConstraint : [filterConstraint];
+                        if (field === 'global') return; // Skip global filter here
+                        const filterMeta = options.filters[field];
+                        if (!filterMeta) return;
+
+                        let constraints: any[] = [];
+                        if (Array.isArray(filterMeta)) {
+                            constraints = filterMeta;
+                        } else if (filterMeta.constraints) {
+                            constraints = filterMeta.constraints;
+                        } else {
+                            constraints = [filterMeta];
+                        }
+
                         constraints.forEach(constraint => {
-                            if (constraint && constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
+                            if (constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
                                 const filterValue = String(constraint.value).toLowerCase();
                                 contacts = contacts.filter(item => {
                                     const itemValue = item[field] ? String(item[field]).toLowerCase() : '';
@@ -177,6 +200,8 @@ try {
                                         case 'equals': case 'is': return itemValue === filterValue;
                                         case 'startsWith': return itemValue.startsWith(filterValue);
                                         case 'endsWith': return itemValue.endsWith(filterValue);
+                                        case 'notContains': return itemValue.indexOf(filterValue) === -1;
+                                        case 'notEquals': return itemValue !== filterValue;
                                         default: return itemValue.indexOf(filterValue) !== -1;
                                     }
                                 });
@@ -282,9 +307,21 @@ try {
                 const data = fs.readFileSync(filePath, 'utf-8');
                 let products: any[] = JSON.parse(data);
 
-                // Global filtering
-                if (options?.globalFilter) {
-                    const filterValue = options.globalFilter.toLowerCase();
+                // Combined Global Filter Handling
+                let globalFilterValue = options?.globalFilter || '';
+                if (options?.filters?.global) {
+                    const globalMeta = options.filters.global;
+                    if (Array.isArray(globalMeta)) {
+                        globalFilterValue = globalMeta[0]?.value || globalFilterValue;
+                    } else if (globalMeta.constraints) {
+                        globalFilterValue = globalMeta.constraints[0]?.value || globalFilterValue;
+                    } else {
+                        globalFilterValue = globalMeta.value || globalFilterValue;
+                    }
+                }
+
+                if (globalFilterValue) {
+                    const filterValue = String(globalFilterValue).toLowerCase();
                     products = products.filter(p =>
                         (p.name && p.name.toLowerCase().includes(filterValue)) ||
                         (p.description && p.description.toLowerCase().includes(filterValue))
@@ -294,10 +331,21 @@ try {
                 // Column filtering
                 if (options?.filters) {
                     Object.keys(options.filters).forEach(field => {
-                        const filterConstraint = options.filters[field];
-                        const constraints = Array.isArray(filterConstraint) ? filterConstraint : [filterConstraint];
+                        if (field === 'global') return;
+                        const filterMeta = options.filters[field];
+                        if (!filterMeta) return;
+
+                        let constraints: any[] = [];
+                        if (Array.isArray(filterMeta)) {
+                            constraints = filterMeta;
+                        } else if (filterMeta.constraints) {
+                            constraints = filterMeta.constraints;
+                        } else {
+                            constraints = [filterMeta];
+                        }
+
                         constraints.forEach(constraint => {
-                            if (constraint && constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
+                            if (constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
                                 const filterValue = String(constraint.value).toLowerCase();
                                 products = products.filter(item => {
                                     const itemValue = item[field] ? String(item[field]).toLowerCase() : '';
@@ -306,6 +354,8 @@ try {
                                         case 'equals': case 'is': return itemValue === filterValue;
                                         case 'startsWith': return itemValue.startsWith(filterValue);
                                         case 'endsWith': return itemValue.endsWith(filterValue);
+                                        case 'notContains': return itemValue.indexOf(filterValue) === -1;
+                                        case 'notEquals': return itemValue !== filterValue;
                                         default: return itemValue.indexOf(filterValue) !== -1;
                                     }
                                 });
@@ -408,9 +458,21 @@ try {
                 const data = fs.readFileSync(filePath, 'utf-8');
                 let invoices: any[] = JSON.parse(data);
 
-                // Global filtering
-                if (options?.globalFilter) {
-                    const filterValue = options.globalFilter.toLowerCase();
+                // Combined Global Filter Handling
+                let globalFilterValue = options?.globalFilter || '';
+                if (options?.filters?.global) {
+                    const globalMeta = options.filters.global;
+                    if (Array.isArray(globalMeta)) {
+                        globalFilterValue = globalMeta[0]?.value || globalFilterValue;
+                    } else if (globalMeta.constraints) {
+                        globalFilterValue = globalMeta.constraints[0]?.value || globalFilterValue;
+                    } else {
+                        globalFilterValue = globalMeta.value || globalFilterValue;
+                    }
+                }
+
+                if (globalFilterValue) {
+                    const filterValue = String(globalFilterValue).toLowerCase();
                     invoices = invoices.filter(inv =>
                         (inv.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(filterValue)) ||
                         (inv.customerName && inv.customerName.toLowerCase().includes(filterValue))
@@ -420,27 +482,32 @@ try {
                 // Column filtering
                 if (options?.filters) {
                     Object.keys(options.filters).forEach(field => {
-                        const filterConstraint = options.filters[field];
-                        const constraints = Array.isArray(filterConstraint) ? filterConstraint : [filterConstraint];
+                        if (field === 'global') return;
+                        const filterMeta = options.filters[field];
+                        if (!filterMeta) return;
+
+                        let constraints: any[] = [];
+                        if (Array.isArray(filterMeta)) {
+                            constraints = filterMeta;
+                        } else if (filterMeta.constraints) {
+                            constraints = filterMeta.constraints;
+                        } else {
+                            constraints = [filterMeta];
+                        }
 
                         constraints.forEach(constraint => {
-                            if (constraint && constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
+                            if (constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
                                 const filterValue = String(constraint.value).toLowerCase();
                                 invoices = invoices.filter(inv => {
                                     const itemValue = inv[field] ? String(inv[field]).toLowerCase() : '';
                                     switch (constraint.matchMode) {
-                                        case 'contains':
-                                            return itemValue.indexOf(filterValue) !== -1;
-                                        case 'equals':
-                                        case 'is':
-                                            return itemValue === filterValue;
-                                        case 'startsWith':
-                                            return itemValue.startsWith(filterValue);
-                                        case 'endsWith':
-                                            return itemValue.endsWith(filterValue);
-                                        default:
-                                            // Fallback for simple values
-                                            return itemValue.indexOf(filterValue) !== -1;
+                                        case 'contains': return itemValue.indexOf(filterValue) !== -1;
+                                        case 'equals': case 'is': return itemValue === filterValue;
+                                        case 'startsWith': return itemValue.startsWith(filterValue);
+                                        case 'endsWith': return itemValue.endsWith(filterValue);
+                                        case 'notContains': return itemValue.indexOf(filterValue) === -1;
+                                        case 'notEquals': return itemValue !== filterValue;
+                                        default: return itemValue.indexOf(filterValue) !== -1;
                                     }
                                 });
                             }
@@ -604,9 +671,21 @@ try {
                 const data = fs.readFileSync(filePath, 'utf-8');
                 let purchases: any[] = JSON.parse(data);
 
-                // Global filtering
-                if (options?.globalFilter) {
-                    const filterValue = options.globalFilter.toLowerCase();
+                // Combined Global Filter Handling
+                let globalFilterValue = options?.globalFilter || '';
+                if (options?.filters?.global) {
+                    const globalMeta = options.filters.global;
+                    if (Array.isArray(globalMeta)) {
+                        globalFilterValue = globalMeta[0]?.value || globalFilterValue;
+                    } else if (globalMeta.constraints) {
+                        globalFilterValue = globalMeta.constraints[0]?.value || globalFilterValue;
+                    } else {
+                        globalFilterValue = globalMeta.value || globalFilterValue;
+                    }
+                }
+
+                if (globalFilterValue) {
+                    const filterValue = String(globalFilterValue).toLowerCase();
                     purchases = purchases.filter(p =>
                         (p.sellerName && p.sellerName.toLowerCase().includes(filterValue)) ||
                         (p.sellerGst && p.sellerGst.toLowerCase().includes(filterValue)) ||
@@ -617,10 +696,21 @@ try {
                 // Column filtering
                 if (options?.filters) {
                     Object.keys(options.filters).forEach(field => {
-                        const filterConstraint = options.filters[field];
-                        const constraints = Array.isArray(filterConstraint) ? filterConstraint : [filterConstraint];
+                        if (field === 'global') return;
+                        const filterMeta = options.filters[field];
+                        if (!filterMeta) return;
+
+                        let constraints: any[] = [];
+                        if (Array.isArray(filterMeta)) {
+                            constraints = filterMeta;
+                        } else if (filterMeta.constraints) {
+                            constraints = filterMeta.constraints;
+                        } else {
+                            constraints = [filterMeta];
+                        }
+
                         constraints.forEach(constraint => {
-                            if (constraint && constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
+                            if (constraint.value !== null && constraint.value !== undefined && constraint.value !== '') {
                                 const filterValue = String(constraint.value).toLowerCase();
                                 purchases = purchases.filter(item => {
                                     const itemValue = item[field] ? String(item[field]).toLowerCase() : '';
@@ -629,6 +719,8 @@ try {
                                         case 'equals': case 'is': return itemValue === filterValue;
                                         case 'startsWith': return itemValue.startsWith(filterValue);
                                         case 'endsWith': return itemValue.endsWith(filterValue);
+                                        case 'notContains': return itemValue.indexOf(filterValue) === -1;
+                                        case 'notEquals': return itemValue !== filterValue;
                                         default: return itemValue.indexOf(filterValue) !== -1;
                                     }
                                 });
