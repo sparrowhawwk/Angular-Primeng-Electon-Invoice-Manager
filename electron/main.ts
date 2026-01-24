@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen, ipcMain } from 'electron';
+import { app, BrowserWindow, screen, ipcMain, Menu } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 import * as fs from 'fs';
@@ -10,6 +10,7 @@ process.on('uncaughtException', (error) => {
 let win: BrowserWindow | null = null;
 const args = process.argv.slice(1);
 const serve = args.some((val) => val === '--serve');
+const isProduction = app.isPackaged || !serve;
 
 if (serve) {
     try {
@@ -49,6 +50,7 @@ function createWindow(): BrowserWindow {
             nodeIntegration: true,
             allowRunningInsecureContent: serve,
             contextIsolation: false,
+            devTools: !isProduction,
         },
     });
 
@@ -85,6 +87,11 @@ try {
     // This method will be called when Electron has finished
     // initialization and is ready to create browser windows.
     app.on('ready', () => {
+        if (isProduction) {
+            Menu.setApplicationMenu(null);
+            // On Mac, setting it to null might still show some defaults, 
+            // but for a truly clean look, this is the standard way.
+        }
         // Added delay to fix issue on some Windows 10 machines
         setTimeout(createWindow, 400);
     });
@@ -535,6 +542,9 @@ try {
                         }
                         return result * order;
                     });
+                } else {
+                    // Default sort: date descending
+                    invoices.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                 }
 
                 const totalRecords = invoices.length;
@@ -607,11 +617,12 @@ try {
                     isNewFinalization = true;
                 }
 
-                invoices.push({
+                const newInvoice = {
                     ...invoice,
                     id: Date.now(),
                     invoiceNumber: invoiceNumber
-                });
+                };
+                invoices.push(newInvoice);
             }
 
             // Perform stock deduction if finalizing
@@ -636,8 +647,12 @@ try {
                 }
             }
 
+            // Sort invoices by date descending before saving
+            invoices.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
             fs.writeFileSync(filePath, JSON.stringify(invoices, null, 2));
-            return { success: true };
+            const savedId = invoice.id || invoices[invoices.length - 1].id;
+            return { success: true, id: savedId };
         } catch (error) {
             console.error('Error saving invoice:', error);
             return { success: false, error: (error as Error).message };

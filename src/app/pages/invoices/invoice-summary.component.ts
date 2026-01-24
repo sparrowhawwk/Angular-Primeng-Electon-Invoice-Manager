@@ -110,10 +110,21 @@ import { ContactService } from '../../services/contact.service';
               <span>Subtotal:</span>
               <span class="font-semibold">{{ invoice()?.subtotal | currency:'INR' }}</span>
             </div>
-            <div class="flex justify-between text-gray-600">
-              <span>Tax ({{ invoice()?.taxType }} {{ invoice()?.taxRate }}%):</span>
-              <span class="font-semibold">{{ invoice()?.taxAmount | currency:'INR' }}</span>
-            </div>
+            @if (invoice()?.taxType === 'GST') {
+              <div class="flex justify-between text-gray-600">
+                <span>CGST ({{ invoice()?.taxRate }}%):</span>
+                <span class="font-semibold">{{ (invoice()?.subtotal * (invoice()?.taxRate / 100)) | currency:'INR' }}</span>
+              </div>
+              <div class="flex justify-between text-gray-600">
+                <span>SGST ({{ invoice()?.taxRate }}%):</span>
+                <span class="font-semibold">{{ (invoice()?.subtotal * (invoice()?.taxRate / 100)) | currency:'INR' }}</span>
+              </div>
+            } @else {
+              <div class="flex justify-between text-gray-600">
+                <span>IGST ({{ invoice()?.taxRate }}%):</span>
+                <span class="font-semibold">{{ invoice()?.taxAmount | currency:'INR' }}</span>
+              </div>
+            }
             <div class="flex justify-between text-xl font-bold text-primary-600 border-t-2 border-primary-500 pt-3 mt-3">
               <span>Total Amount:</span>
               <span>{{ invoice()?.total | currency:'INR' }}</span>
@@ -151,6 +162,13 @@ import { ContactService } from '../../services/contact.service';
         .mb-12 { margin-bottom: 20px !important; }
       }
     </style>
+  `,
+  styles: `
+    :host { 
+        display: block; 
+        min-height: 100%;
+        background-color: var(--surface-ground);
+    }
   `
 })
 export class InvoiceSummaryComponent implements OnInit {

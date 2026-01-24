@@ -1,16 +1,16 @@
 import { Component, OnInit } from '@angular/core';
 import { MenuItem } from 'primeng/api';
-import { Menubar } from 'primeng/menubar';
+import { TieredMenu } from 'primeng/tieredmenu';
 import { RouterModule } from '@angular/router';
 
 @Component({
-    selector: 'app-header',
+    selector: 'app-sidebar',
     standalone: true,
-    imports: [Menubar, RouterModule],
-    templateUrl: './header.component.html',
-    styleUrl: './header.component.css'
+    imports: [TieredMenu, RouterModule],
+    templateUrl: './sidebar.component.html',
+    styleUrl: './sidebar.component.css'
 })
-export class HeaderComponent implements OnInit {
+export class SidebarComponent implements OnInit {
     items: MenuItem[] | undefined;
 
     ngOnInit() {

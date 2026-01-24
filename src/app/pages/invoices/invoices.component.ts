@@ -195,6 +195,7 @@ interface InvoiceItem {
         [(visible)]="displayDialog" 
         [modal]="true" 
         [style]="{width: '900px'}"
+        [contentStyle]="{'max-height': '80vh', 'overflow': 'auto'}"
         [draggable]="false"
         [resizable]="false"
       >
@@ -356,10 +357,21 @@ interface InvoiceItem {
                  <span>Subtotal:</span>
                  <span class="font-bold">{{ subtotal() | currency:'INR' }}</span>
                </div>
-               <div class="flex justify-between">
-                 <span>Tax ({{taxRate()}}%):</span>
-                 <span class="font-bold">{{ taxAmount() | currency:'INR' }}</span>
-               </div>
+               @if (taxType() === 'GST') {
+                 <div class="flex justify-between">
+                   <span>CGST ({{taxRate()}}%):</span>
+                   <span class="font-bold">{{ cgstAmount() | currency:'INR' }}</span>
+                 </div>
+                 <div class="flex justify-between">
+                   <span>SGST ({{taxRate()}}%):</span>
+                   <span class="font-bold">{{ sgstAmount() | currency:'INR' }}</span>
+                 </div>
+               } @else {
+                 <div class="flex justify-between">
+                   <span>IGST ({{taxRate()}}%):</span>
+                   <span class="font-bold">{{ igstAmount() | currency:'INR' }}</span>
+                 </div>
+               }
                <div class="flex justify-between text-lg border-t pt-2 mt-2">
                  <span class="font-bold">Total:</span>
                  <span class="font-bold text-primary">{{ total() | currency:'INR' }}</span>
@@ -431,11 +443,11 @@ export class InvoicesComponent implements OnInit {
   selectedCustomer = signal<any>(null);
   items = signal<InvoiceItem[]>([{ productName: '', description: '', quantity: 1, unitPrice: 0, amount: 0 }]);
   taxType = signal('GST');
-  taxRate = signal(18);
+  taxRate = signal(2.5);
   notes = '';
 
   taxTypes = ['GST', 'IGST'];
-  taxRates = Array.from({ length: 31 }, (_, i) => 3 + i * 0.5);
+  taxRates = Array.from({ length: 33 }, (_, i) => 2 + i * 0.5);
   statuses = ['draft', 'finalized'];
 
   // Suggestions
@@ -450,7 +462,12 @@ export class InvoicesComponent implements OnInit {
   customerAddress2 = computed(() => this.selectedCustomer()?.address2 || '');
 
   subtotal = computed(() => this.items().reduce((sum, item) => sum + item.amount, 0));
-  taxAmount = computed(() => this.subtotal() * (this.taxRate() / 100));
+
+  cgstAmount = computed(() => this.taxType() === 'GST' ? this.subtotal() * (this.taxRate() / 100) : 0);
+  sgstAmount = computed(() => this.taxType() === 'GST' ? this.subtotal() * (this.taxRate() / 100) : 0);
+  igstAmount = computed(() => this.taxType() === 'IGST' ? this.subtotal() * (this.taxRate() / 100) : 0);
+
+  taxAmount = computed(() => this.cgstAmount() + this.sgstAmount() + this.igstAmount());
   total = computed(() => this.subtotal() + this.taxAmount());
 
   isInvoiceValid = computed(() => {
@@ -614,7 +631,7 @@ export class InvoicesComponent implements OnInit {
     this.selectedCustomer.set(null);
     this.items.set([{ productName: '', description: '', quantity: 1, unitPrice: 0, amount: 0 }]);
     this.taxType.set('GST');
-    this.taxRate.set(18);
+    this.taxRate.set(2.5);
     this.notes = '';
     this.displayDialog = true;
   }
@@ -749,10 +766,21 @@ export class InvoicesComponent implements OnInit {
                         <span>Subtotal:</span>
                         <span>₹ ${this.subtotal().toFixed(2)}</span>
                     </div>
-                    <div class="summary-row">
-                        <span>Tax (${this.taxType()} ${this.taxRate()}%):</span>
-                        <span>₹ ${this.taxAmount().toFixed(2)}</span>
-                    </div>
+                    ${this.taxType() === 'GST' ? `
+                        <div class="summary-row">
+                            <span>CGST (${this.taxRate()}%):</span>
+                            <span>₹ ${this.cgstAmount().toFixed(2)}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>SGST (${this.taxRate()}%):</span>
+                            <span>₹ ${this.sgstAmount().toFixed(2)}</span>
+                        </div>
+                    ` : `
+                        <div class="summary-row">
+                            <span>IGST (${this.taxRate()}%):</span>
+                            <span>₹ ${this.igstAmount().toFixed(2)}</span>
+                        </div>
+                    `}
                     <div class="summary-row total-row">
                         <span>Total Amount:</span>
                         <span>₹ ${this.total().toFixed(2)}</span>
@@ -810,7 +838,12 @@ export class InvoicesComponent implements OnInit {
       if (response && response.success) {
         this.messageService.add({ severity: 'success', summary: 'Success', detail: `Invoice saved as ${status}` });
         this.displayDialog = false;
-        this.loadInvoices();
+
+        if (status === 'finalized') {
+          this.router.navigate(['/invoices/view', response.id]);
+        } else {
+          this.loadInvoices();
+        }
       } else {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: response.error || 'Failed to save invoice' });
       }

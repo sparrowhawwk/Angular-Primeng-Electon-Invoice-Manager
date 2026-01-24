@@ -1,14 +1,19 @@
-app-header {
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    display: block;
-    background-color: var(--surface-card);
-    border-bottom: 1px solid var(--surface-border);
+.app-container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
 }
 
 .main-content {
-    /* Ensure content starts below the sticky header if needed, 
-       though sticky doesn't take element out of flow like fixed. */
-    min-height: calc(100vh - 60px);
+    flex: 1;
+    padding: 0 20px 20px 20px;
+    background-color: var(--surface-ground);
+    overflow-y: auto;
+}
+
+app-sidebar {
+    flex-shrink: 0;
+    width: 250px;
+    z-index: 1001;
+    position: relative;
 }

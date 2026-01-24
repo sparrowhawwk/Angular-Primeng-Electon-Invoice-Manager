@@ -16,6 +16,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { PurchaseChartComponent } from './purchase-chart.component';
 
 @Component({
@@ -37,7 +38,8 @@ import { PurchaseChartComponent } from './purchase-chart.component';
     ConfirmDialogModule,
     PurchaseChartComponent,
     TagModule,
-    SelectButtonModule
+    SelectButtonModule,
+    InputNumberModule
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -135,9 +137,11 @@ import { PurchaseChartComponent } from './purchase-chart.component';
             <td>{{ po.price | currency:'INR' }}</td>
             <td>{{ po.taxPercentage }}%</td>
             <td>
-              <p-tag [value]="po.status === 'paid' ? 'Paid' : 'Unpaid'" [severity]="po.status === 'paid' ? 'success' : 'warn'"></p-tag>
+              <p-tag [value]="po.status === 'paid' ? 'Paid' : (po.status === 'partial' ? 'Partial' : 'Unpaid')" 
+                     [severity]="po.status === 'paid' ? 'success' : (po.status === 'partial' ? 'info' : 'warn')">
+              </p-tag>
             </td>
-            <td>{{ (po.status === 'paid' ? po.paymentDate : null) | date:'mediumDate' }}</td>
+            <td>{{ (po.status === 'paid' || po.status === 'partial' ? po.paymentDate : null) | date:'mediumDate' }}</td>
             <td>
               <div class="flex gap-2">
                 <p-button 
@@ -231,9 +235,24 @@ import { PurchaseChartComponent } from './purchase-chart.component';
                     (ngModelChange)="paymentDate.set($event)" 
                     [showIcon]="true" 
                     appendTo="body"
-                    [disabled]="status() !== 'paid'"
+                    [disabled]="status() === 'unpaid'"
                     placeholder="Select Date"
                 ></p-datepicker>
+            </div>
+
+            <!-- Paid Amount (only show if partial) -->
+            <div class="flex flex-col gap-2" *ngIf="status() === 'partial'">
+                <label for="paidAmount" class="font-medium text-primary-600 font-bold">Partial Amount Paid</label>
+                <p-inputNumber 
+                    id="paidAmount" 
+                    [ngModel]="paidAmount()" 
+                    (ngModelChange)="paidAmount.set($event)" 
+                    mode="currency" 
+                    currency="INR" 
+                    locale="en-IN"
+                    [style]="{width: '100%'}"
+                    placeholder="Enter amount"
+                ></p-inputNumber>
             </div>
 
             <!-- Notes (optional) -->
@@ -308,8 +327,11 @@ export class PurchaseOrdersComponent implements OnInit {
 
   statusOptions = [
     { label: 'Paid', value: 'paid' },
+    { label: 'Partial', value: 'partial' },
     { label: 'Unpaid', value: 'unpaid' }
   ];
+
+  paidAmount = signal<number | null>(null);
 
   constructor(
     private poService: PurchaseOrderService,
@@ -364,6 +386,7 @@ export class PurchaseOrdersComponent implements OnInit {
     this.taxPercentage.set('');
     this.status.set('unpaid');
     this.paymentDate.set(null);
+    this.paidAmount.set(null);
     this.notes.set('');
     this.displayDialog = true;
   }
@@ -377,6 +400,7 @@ export class PurchaseOrdersComponent implements OnInit {
     this.taxPercentage.set(po.taxPercentage || '');
     this.status.set(po.status || 'unpaid');
     this.paymentDate.set(po.paymentDate ? new Date(po.paymentDate) : null);
+    this.paidAmount.set(po.paidAmount || null);
     this.notes.set(po.notes || '');
     this.displayDialog = true;
   }
@@ -396,6 +420,7 @@ export class PurchaseOrdersComponent implements OnInit {
       taxPercentage: this.taxPercentage(),
       status: this.status(),
       paymentDate: this.paymentDate(),
+      paidAmount: this.status() === 'partial' ? this.paidAmount() : (this.status() === 'paid' ? this.price() : null),
       notes: this.notes()
     };
 
