@@ -59,7 +59,7 @@ interface InvoiceItem {
         <h2 class="text-2xl font-bold">Invoices</h2>
       </div>
 
-      <app-transaction-chart></app-transaction-chart>
+
 
       <p-table 
         [value]="invoices()" 
@@ -78,11 +78,19 @@ interface InvoiceItem {
       >
         <ng-template #caption>
           <div class="flex justify-between items-center bg-gray-50 p-4">
-            <p-button 
-              label="Add New Invoice" 
-              icon="pi pi-plus" 
-              (onClick)="showDialog()"
-            ></p-button>
+            <div class="flex gap-2">
+              <p-button 
+                label="Add New Invoice" 
+                icon="pi pi-plus" 
+                (onClick)="showDialog()"
+              ></p-button>
+              <p-button 
+                label="Invoice Trend" 
+                icon="pi pi-chart-line" 
+                severity="secondary"
+                (onClick)="displayTrendDialog = true"
+              ></p-button>
+            </div>
             <p-iconfield iconPosition="left" class="ml-auto">
                 <p-inputicon>
                     <i class="pi pi-search"></i>
@@ -420,6 +428,17 @@ interface InvoiceItem {
       </p-dialog>
 
       <p-confirmDialog></p-confirmDialog>
+
+      <p-dialog 
+        header="Invoice Trend" 
+        [(visible)]="displayTrendDialog" 
+        [modal]="true" 
+        [style]="{width: '1000px'}"
+        [draggable]="false"
+        [resizable]="false"
+      >
+        <app-transaction-chart></app-transaction-chart>
+      </p-dialog>
     </div>
   `,
   styles: `
@@ -432,6 +451,7 @@ export class InvoicesComponent implements OnInit {
   loading = signal(false);
   totalRecords = signal(0);
   displayDialog = false;
+  displayTrendDialog = false;
   viewMode = signal(false);
   currentInvoiceId = signal<number | undefined>(undefined);
   currentInvoiceNumber = '';
@@ -512,8 +532,8 @@ export class InvoicesComponent implements OnInit {
 
   calculateHeight() {
     const windowHeight = window.innerHeight;
-    // Offset for header (60), page title (60), chart (200), table header/caption (100), margin/padding
-    const offset = 480;
+    // Offset for header (60), page title (60), table header/caption (80), paginator (50), margin/padding
+    const offset = 280;
     const height = Math.max(300, windowHeight - offset);
     this.tableHeight.set(`${height}px`);
   }

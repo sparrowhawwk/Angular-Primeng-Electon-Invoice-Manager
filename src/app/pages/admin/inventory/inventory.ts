@@ -42,7 +42,7 @@ import { InventoryChartComponent } from './inventory-chart.component';
         <h2 class="text-2xl font-bold">Inventory Management</h2>
       </div>
 
-      <app-inventory-chart></app-inventory-chart>
+
 
       <p-table 
         [value]="products()" 
@@ -61,11 +61,19 @@ import { InventoryChartComponent } from './inventory-chart.component';
       >
         <ng-template #caption>
           <div class="flex justify-between items-center bg-gray-50 p-4">
-            <p-button 
-              label="Add New Product" 
-              icon="pi pi-plus" 
-              (onClick)="showDialog()"
-            ></p-button>
+            <div class="flex gap-2">
+              <p-button 
+                label="Add New Product" 
+                icon="pi pi-plus" 
+                (onClick)="showDialog()"
+              ></p-button>
+              <p-button 
+                label="Inventory Trend" 
+                icon="pi pi-chart-line" 
+                severity="secondary"
+                (onClick)="displayTrendDialog = true"
+              ></p-button>
+            </div>
             <p-iconfield iconPosition="left" class="ml-auto">
                 <p-inputicon>
                     <i class="pi pi-search"></i>
@@ -214,6 +222,17 @@ import { InventoryChartComponent } from './inventory-chart.component';
           ></p-button>
         </ng-template>
       </p-confirmDialog>
+
+      <p-dialog 
+        header="Inventory Trend" 
+        [(visible)]="displayTrendDialog" 
+        [modal]="true" 
+        [style]="{width: '1000px'}"
+        [draggable]="false"
+        [resizable]="false"
+      >
+        <app-inventory-chart></app-inventory-chart>
+      </p-dialog>
     </div>
   `,
   styles: `
@@ -234,6 +253,7 @@ export class InventoryComponent implements OnInit {
   loading = signal(false);
   totalRecords = signal(0);
   displayDialog = false;
+  displayTrendDialog = false;
   viewMode = signal(false);
 
   productName = signal('');
@@ -260,8 +280,8 @@ export class InventoryComponent implements OnInit {
 
   calculateHeight() {
     const windowHeight = window.innerHeight;
-    // Offset for header (60), page title (60), chart (200), captions/header (120), padding (40)
-    const offset = 480;
+    // Offset for header (60), page title (60), table header/caption (80), paginator (50), margin/padding
+    const offset = 280;
     const height = Math.max(300, windowHeight - offset);
     this.tableHeight.set(`${height}px`);
   }

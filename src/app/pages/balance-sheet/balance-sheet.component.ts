@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TableModule } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { CardModule } from 'primeng/card';
@@ -39,7 +39,6 @@ interface BalanceSheetEntry {
     ButtonModule,
     SelectButtonModule,
     CardModule,
-    ChartModule,
     DialogModule,
     PanelModule,
     DividerModule,
@@ -87,15 +86,15 @@ interface BalanceSheetEntry {
         </p-card>
       </div>
 
-      <div class="card shadow-sm border rounded-lg bg-white p-6 mb-8">
-        <h3 class="text-xl font-bold text-gray-700 mb-4">Financial Trends</h3>
-        <div style="height: 300px">
-          <p-chart type="line" [data]="chartData()" [options]="chartOptions"></p-chart>
-        </div>
-      </div>
+
 
       <p-table
         [value]="balanceData()"
+        [paginator]="true"
+        [rows]="10"
+        [lazy]="true"
+        (onLazyLoad)="loadBalanceData($event)"
+        [totalRecords]="totalRecords()"
         stripedRows
         [responsiveLayout]="'scroll'"
         class="shadow-sm border rounded-lg overflow-hidden"
@@ -250,7 +249,7 @@ interface BalanceSheetEntry {
   `]
 })
 export class BalanceSheetComponent implements OnInit {
-  selectedPeriod = 'monthly';
+  selectedPeriod = 'yearly';
   periodOptions = [
     { label: 'Daily', value: 'daily' },
     { label: 'Weekly', value: 'weekly' },
@@ -259,8 +258,9 @@ export class BalanceSheetComponent implements OnInit {
   ];
 
   balanceData = signal<BalanceSheetEntry[]>([]);
-  chartData = signal<any>(null);
   loading = signal(false);
+  totalRecords = signal(0);
+  private allBalanceEntries: BalanceSheetEntry[] = [];
 
   displayDetails = false;
   selectedEntry = signal<BalanceSheetEntry | null>(null);
@@ -272,16 +272,7 @@ export class BalanceSheetComponent implements OnInit {
     return data[data.length - 1];
   });
 
-  chartOptions = {
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'bottom' }
-    },
-    scales: {
-      x: { grid: { display: false } },
-      y: { beginAtZero: true }
-    }
-  };
+
 
   constructor(
     private invoiceService: InvoiceService,
@@ -290,7 +281,7 @@ export class BalanceSheetComponent implements OnInit {
   ) { }
 
   async ngOnInit() {
-    await this.loadBalanceData();
+    // Initial load will be triggered by p-table onLazyLoad
   }
 
   async onPeriodChange() {
@@ -302,7 +293,7 @@ export class BalanceSheetComponent implements OnInit {
     this.displayDetails = true;
   }
 
-  async loadBalanceData() {
+  async loadBalanceData(event?: TableLazyLoadEvent) {
     this.loading.set(true);
     try {
       const [invoicesResp, posResp, productsResp] = await Promise.all([
@@ -321,7 +312,7 @@ export class BalanceSheetComponent implements OnInit {
       }));
       const products = productsResp.data || [];
 
-      this.calculateSheet(invoices, purchaseOrders, products);
+      this.calculateSheet(invoices, purchaseOrders, products, event);
     } catch (error) {
       console.error('Error loading balance data:', error);
     } finally {
@@ -329,19 +320,21 @@ export class BalanceSheetComponent implements OnInit {
     }
   }
 
-  calculateSheet(invoices: any[], purchaseOrders: any[], products: any[]) {
-    const entries: BalanceSheetEntry[] = [];
+  calculateSheet(invoices: any[], purchaseOrders: any[], products: any[], event?: TableLazyLoadEvent) {
+    const allEntries: BalanceSheetEntry[] = [];
     const now = new Date();
 
     // Use a consistent "end of today" as the base for i=0
     const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-    let periods = 12;
-    if (this.selectedPeriod === 'daily') periods = 14;
-    else if (this.selectedPeriod === 'weekly') periods = 12;
-    else if (this.selectedPeriod === 'yearly') periods = 5;
+    // Support more periods for pagination (e.g., up to 36 months/weeks)
+    let totalPeriods = 12;
+    if (this.selectedPeriod === 'daily') totalPeriods = 30;
+    else if (this.selectedPeriod === 'weekly') totalPeriods = 52;
+    else if (this.selectedPeriod === 'yearly') totalPeriods = 10;
+    else if (this.selectedPeriod === 'monthly') totalPeriods = 36;
 
-    for (let i = periods - 1; i >= 0; i--) {
+    for (let i = totalPeriods - 1; i >= 0; i--) {
       let startDate: Date;
       let periodLabel: string;
 
@@ -350,7 +343,6 @@ export class BalanceSheetComponent implements OnInit {
         startDate.setDate(startDate.getDate() - i);
         periodLabel = startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       } else if (this.selectedPeriod === 'weekly') {
-        // End of the week i weeks ago
         startDate = new Date(endOfToday);
         startDate.setDate(startDate.getDate() - (i * 7));
         periodLabel = `Ends ${startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
@@ -359,23 +351,17 @@ export class BalanceSheetComponent implements OnInit {
         startDate = new Date(year, 11, 31, 23, 59, 59, 999);
         periodLabel = year.toString();
       } else {
-        // Monthly: End of month i months ago
         const monthDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
         startDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), monthDate.getDate(), 23, 59, 59, 999);
         periodLabel = monthDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
       }
 
-      // Assets: Receivables (Finalized Invoices up to startDate)
       const periodInvoices = invoices.filter(inv => inv.parsedDate <= startDate && inv.status === 'finalized');
       const receivables = periodInvoices.reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
-      // Liabilities: Payables (Purchase Orders with status 'unpaid' up to startDate)
       const periodPOs = purchaseOrders.filter(po => po.parsedDate <= startDate && po.status !== 'paid');
       const payables = periodPOs.reduce((sum, po) => sum + (Number(po.total) || Number(po.price) * (1 + (Number(po.taxPercentage) || 0) / 100) || 0), 0);
 
-      // Inventory Value Backward Calculation
       let inventoryValue = products.reduce((sum, p) => sum + ((p.totalUnits || 0) * (p.unitPrice || 0)), 0);
-
-      // Add back items sold in the FUTURE from this startDate
       invoices.filter(inv => inv.parsedDate > startDate && inv.status === 'finalized')
         .forEach(inv => {
           inv.items?.forEach((item: any) => {
@@ -384,9 +370,6 @@ export class BalanceSheetComponent implements OnInit {
           });
         });
 
-      // Subtract items purchased in the FUTURE from this startDate
-      // Note: We use all POs for inventory calculation regardless of payment status, 
-      // because inventory is received when PO is created/received, not necessarily paid.
       purchaseOrders.filter(po => po.parsedDate > startDate)
         .forEach(po => {
           po.items?.forEach((item: any) => {
@@ -398,7 +381,7 @@ export class BalanceSheetComponent implements OnInit {
       const assets = inventoryValue + receivables;
       const equity = assets - payables;
 
-      entries.push({
+      allEntries.push({
         period: periodLabel,
         assets,
         liabilities: payables,
@@ -413,44 +396,22 @@ export class BalanceSheetComponent implements OnInit {
       });
     }
 
-    this.balanceData.set(entries);
-    this.updateChart(entries);
+    // Sort descending by period (most recent first)
+    allEntries.reverse();
+
+    this.allBalanceEntries = allEntries; // Store full data for export
+    this.totalRecords.set(allEntries.length);
+    
+    // Apply pagination
+    const first = event?.first || 0;
+    const rows = event?.rows || 10;
+    this.balanceData.set(allEntries.slice(first, first + rows));
   }
 
-  updateChart(entries: BalanceSheetEntry[]) {
-    this.chartData.set({
-      labels: entries.map(e => e.period),
-      datasets: [
-        {
-          label: 'Total Assets',
-          data: entries.map(e => e.assets),
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          fill: true,
-          tension: 0.4
-        },
-        {
-          label: 'Liabilities',
-          data: entries.map(e => e.liabilities),
-          borderColor: '#ef4444',
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
-          fill: true,
-          tension: 0.4
-        },
-        {
-          label: 'Equity',
-          data: entries.map(e => e.equity),
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          fill: true,
-          tension: 0.4
-        }
-      ]
-    });
-  }
+
 
   exportToExcel() {
-    const data = this.balanceData().map(e => ({
+    const data = this.allBalanceEntries.map(e => ({
       Period: e.period,
       'Inventory Value': e.details.inventoryValue,
       Receivables: e.details.receivables,
@@ -459,12 +420,29 @@ export class BalanceSheetComponent implements OnInit {
       Equity: e.equity
     }));
 
+    if (data.length === 0) {
+      console.warn('No data to export');
+      return;
+    }
+
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Balance Sheet');
 
-    // File name based on period
-    const fileName = `Balance_Sheet_${this.selectedPeriod}_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    // Create workbook and write to a blob for reliable download in Electron/Browser
+    const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Balance_Sheet_${this.selectedPeriod}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 0);
   }
 }
