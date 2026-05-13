@@ -104,7 +104,7 @@ import { ContactService } from '../../services/contact.service';
         </table>
 
         <!-- Summary -->
-        <div class="flex flex-col items-end">
+        <div class="flex flex-col items-end mt-8">
           <div class="w-80 space-y-3">
             <div class="flex justify-between text-gray-600">
               <span>Subtotal:</span>
@@ -113,11 +113,11 @@ import { ContactService } from '../../services/contact.service';
             @if (invoice()?.taxType === 'GST') {
               <div class="flex justify-between text-gray-600">
                 <span>CGST ({{ invoice()?.taxRate }}%):</span>
-                <span class="font-semibold">{{ (invoice()?.subtotal * (invoice()?.taxRate / 100)) | currency:'INR' }}</span>
+                <span class="font-semibold">{{ (invoice()?.taxAmount / 2) | currency:'INR' }}</span>
               </div>
               <div class="flex justify-between text-gray-600">
                 <span>SGST ({{ invoice()?.taxRate }}%):</span>
-                <span class="font-semibold">{{ (invoice()?.subtotal * (invoice()?.taxRate / 100)) | currency:'INR' }}</span>
+                <span class="font-semibold">{{ (invoice()?.taxAmount / 2) | currency:'INR' }}</span>
               </div>
             } @else {
               <div class="flex justify-between text-gray-600">
@@ -125,12 +125,19 @@ import { ContactService } from '../../services/contact.service';
                 <span class="font-semibold">{{ invoice()?.taxAmount | currency:'INR' }}</span>
               </div>
             }
-            <div class="flex justify-between text-xl font-bold text-primary-600 border-t-2 border-primary-500 pt-3 mt-3">
-              <span>Total Amount:</span>
+            @if (invoice()?.roundOff) {
+              <div class="flex justify-between text-gray-500 text-sm border-t border-dashed pt-2 mt-2">
+                <span>Round Off:</span>
+                <span>{{ invoice()?.roundOff | currency:'INR' }}</span>
+              </div>
+            }
+            <div class="flex justify-between text-xl font-bold text-primary-600 border-t-2 border-primary-500 pt-3 mt-1">
+              <span>Grand Total:</span>
               <span>{{ invoice()?.total | currency:'INR' }}</span>
             </div>
           </div>
         </div>
+
 
         @if (invoice()?.notes) {
           <div class="mt-16 pt-8 border-t border-gray-100">

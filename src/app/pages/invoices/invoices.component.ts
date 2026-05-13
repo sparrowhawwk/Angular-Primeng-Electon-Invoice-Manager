@@ -380,8 +380,12 @@ interface InvoiceItem {
                    <span class="font-bold">{{ igstAmount() | currency:'INR' }}</span>
                  </div>
                }
-               <div class="flex justify-between text-lg border-t pt-2 mt-2">
-                 <span class="font-bold">Total:</span>
+               <div class="flex justify-between text-gray-500 text-sm border-t pt-2 mt-2">
+                 <span>Round Off:</span>
+                 <span class="font-medium">{{ roundOff() | currency:'INR' }}</span>
+               </div>
+               <div class="flex justify-between text-lg font-bold border-t pt-2 mt-1">
+                 <span>Total:</span>
                  <span class="font-bold text-primary">{{ total() | currency:'INR' }}</span>
                </div>
             </div>
@@ -488,7 +492,10 @@ export class InvoicesComponent implements OnInit {
   igstAmount = computed(() => this.taxType() === 'IGST' ? this.subtotal() * (this.taxRate() / 100) : 0);
 
   taxAmount = computed(() => this.cgstAmount() + this.sgstAmount() + this.igstAmount());
-  total = computed(() => this.subtotal() + this.taxAmount());
+  
+  preciseTotal = computed(() => this.subtotal() + this.taxAmount());
+  total = computed(() => Math.round(this.preciseTotal()));
+  roundOff = computed(() => this.total() - this.preciseTotal());
 
   isInvoiceValid = computed(() => {
     if (!this.selectedCustomer()) return false;
@@ -801,8 +808,12 @@ export class InvoicesComponent implements OnInit {
                             <span>₹ ${this.igstAmount().toFixed(2)}</span>
                         </div>
                     `}
+                    <div class="summary-row">
+                        <span>Round Off:</span>
+                        <span>₹ ${this.roundOff().toFixed(2)}</span>
+                    </div>
                     <div class="summary-row total-row">
-                        <span>Total Amount:</span>
+                        <span>Grand Total:</span>
                         <span>₹ ${this.total().toFixed(2)}</span>
                     </div>
                 </div>
@@ -848,6 +859,7 @@ export class InvoicesComponent implements OnInit {
       taxRate: this.taxRate(),
       subtotal: this.subtotal(),
       taxAmount: this.taxAmount(),
+      roundOff: this.roundOff(),
       total: this.total(),
       notes: this.notes,
       status: status
