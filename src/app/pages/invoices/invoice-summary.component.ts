@@ -67,14 +67,18 @@ import { ContactService } from '../../services/contact.service';
                 <span class="text-gray-500">Invoice Date:</span>
                 <span class="font-bold">{{ invoice()?.date | date }}</span>
               </div>
-              <div class="flex justify-end gap-4">
-                <span class="text-gray-500">Due Date:</span>
-                <span class="font-bold text-red-600">{{ invoice()?.dueDate | date }}</span>
-              </div>
-              <div class="flex justify-end gap-4 mt-4 pt-4 border-t border-dashed">
-                <span class="text-gray-500">Status:</span>
-                <span class="p-tag p-tag-success">{{ invoice()?.status | titlecase }}</span>
-              </div>
+              @if (invoice()?.status !== 'finalized') {
+                <div class="flex justify-end gap-4">
+                  <span class="text-gray-500">Due Date:</span>
+                  <span class="font-bold text-red-600">{{ invoice()?.dueDate | date }}</span>
+                </div>
+              }
+              @if (invoice()?.notes) {
+                <div class="flex justify-end gap-4 mt-4 pt-4 border-t border-dashed">
+                  <span class="text-gray-500">Notes:</span>
+                  <span class="font-bold text-gray-800 whitespace-pre-wrap text-right">{{ invoice()?.notes }}</span>
+                </div>
+              }
             </div>
           </div>
         </div>
@@ -126,7 +130,7 @@ import { ContactService } from '../../services/contact.service';
               </div>
             }
             @if (invoice()?.roundOff) {
-              <div class="flex justify-between text-gray-500 text-sm border-t border-dashed pt-2 mt-2">
+              <div class="flex justify-between text-sm border-t border-dashed pt-2 mt-2">
                 <span>Round Off:</span>
                 <span>{{ invoice()?.roundOff | currency:'INR' }}</span>
               </div>
@@ -137,14 +141,6 @@ import { ContactService } from '../../services/contact.service';
             </div>
           </div>
         </div>
-
-
-        @if (invoice()?.notes) {
-          <div class="mt-16 pt-8 border-t border-gray-100">
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Notes</h3>
-            <p class="text-gray-600 text-sm whitespace-pre-wrap italic">{{ invoice()?.notes }}</p>
-          </div>
-        }
 
         <div class="mt-20 text-center text-gray-400 text-xs border-t pt-8">
           Thank you for your business!

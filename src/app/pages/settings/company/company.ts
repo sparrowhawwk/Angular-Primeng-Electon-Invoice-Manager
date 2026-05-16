@@ -62,6 +62,18 @@ import { CompanyService } from '../../../services/company.service';
           <input pInputText id="ifsc" [(ngModel)]="companyInfo().ifsc" />
         </div>
 
+        <!-- Account Number -->
+        <div class="flex flex-col gap-2">
+          <label for="accountNumber" class="font-medium">Account Number</label>
+          <input pInputText id="accountNumber" [(ngModel)]="companyInfo().accountNumber" />
+        </div>
+
+        <!-- Branch Name -->
+        <div class="flex flex-col gap-2">
+          <label for="branchName" class="font-medium">Branch Name</label>
+          <input pInputText id="branchName" [(ngModel)]="companyInfo().branchName" />
+        </div>
+
         <!-- Primary Address -->
         <div class="flex flex-col gap-2 col-span-2">
           <label for="address1" class="font-medium">Primary Address</label>
@@ -103,6 +115,8 @@ export class CompanyComponent implements OnInit {
     gstin: '',
     bankName: '',
     ifsc: '',
+    accountNumber: '',
+    branchName: '',
     address1: '',
     address2: '',
     message: ''

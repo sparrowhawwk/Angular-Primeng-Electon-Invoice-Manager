@@ -15,6 +15,7 @@ import { SelectModule } from 'primeng/select';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
+import { Tag } from 'primeng/tag';
 import { InvoiceService } from '../../services/invoice.service';
 import { ContactService } from '../../services/contact.service';
 import { InventoryService } from '../../services/inventory.service';
@@ -48,7 +49,8 @@ interface InvoiceItem {
     ConfirmDialogModule,
     IconFieldModule,
     InputIconModule,
-    TransactionChartComponent
+    TransactionChartComponent,
+    Tag
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -75,6 +77,9 @@ interface InvoiceItem {
         stripedRows
         [scrollable]="true"
         [scrollHeight]="tableHeight()"
+        stateStorage="session"
+        stateKey="invoice-table-state"
+        (onStateRestore)="onStateRestore($event)"
       >
         <ng-template #caption>
           <div class="flex justify-between items-center bg-gray-50 p-4">
@@ -98,7 +103,8 @@ interface InvoiceItem {
                 <input 
                 pInputText 
                 type="text" 
-                (input)="dt.filterGlobal($any($event.target).value, 'contains')" 
+                [(ngModel)]="globalFilterValue"
+                (input)="dt.filterGlobal(globalFilterValue, 'contains')" 
                 placeholder="Global Search" 
               />
             </p-iconfield>
@@ -152,7 +158,7 @@ interface InvoiceItem {
                   <ng-template #filter let-value let-filter="filterCallback">
                     <p-select [ngModel]="value" [options]="statuses" (onChange)="filter($event.value)" placeholder="Any" [showClear]="true">
                       <ng-template #item let-option>
-                        <span [class]="'p-tag ' + (option === 'finalized' ? 'p-tag-success' : 'p-tag-info')">{{ option | titlecase }}</span>
+                        <p-tag [severity]="option === 'finalized' ? 'success' : 'warn'" [value]="option | titlecase"></p-tag>
                       </ng-template>
                     </p-select>
                   </ng-template>
@@ -171,9 +177,7 @@ interface InvoiceItem {
             <td>{{ invoice.taxAmount | currency:'INR' }}</td>
             <td>{{ invoice.total | currency:'INR' }}</td>
             <td>
-              <span [class]="'p-tag ' + (invoice.status === 'finalized' ? 'p-tag-success' : 'p-tag-info')">
-                {{ invoice.status | titlecase }}
-              </span>
+              <p-tag [severity]="invoice.status === 'finalized' ? 'success' : 'warn'" [value]="invoice.status | titlecase"></p-tag>
             </td>
             <td>
               <div class="flex gap-2">
@@ -460,6 +464,7 @@ export class InvoicesComponent implements OnInit {
   currentInvoiceId = signal<number | undefined>(undefined);
   currentInvoiceNumber = '';
   tableHeight = signal<string>('500px');
+  globalFilterValue = '';
 
   // Form Fields
   invoiceDate = new Date();
@@ -530,6 +535,10 @@ export class InvoicesComponent implements OnInit {
   ngOnInit() {
     this.loadProductsForSelection();
     this.calculateHeight();
+  }
+
+  onStateRestore(event: any) {
+    this.globalFilterValue = event.filters?.global?.value || '';
   }
 
   @HostListener('window:resize', ['$event'])
@@ -873,8 +882,6 @@ export class InvoicesComponent implements OnInit {
 
         if (status === 'finalized') {
           this.router.navigate(['/invoices/view', response.id]);
-        } else {
-          this.loadInvoices();
         }
       } else {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: response.error || 'Failed to save invoice' });

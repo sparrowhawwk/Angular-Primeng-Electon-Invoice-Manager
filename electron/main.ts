@@ -593,6 +593,8 @@ try {
             }
 
             let isNewFinalization = false;
+            let savedId = invoice.id;
+
             if (invoice.id) {
                 const index = invoices.findIndex(inv => inv.id === invoice.id);
                 if (index !== -1) {
@@ -622,6 +624,7 @@ try {
                     id: Date.now(),
                     invoiceNumber: invoiceNumber
                 };
+                savedId = newInvoice.id;
                 invoices.push(newInvoice);
             }
 
@@ -651,7 +654,7 @@ try {
             invoices.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
             fs.writeFileSync(filePath, JSON.stringify(invoices, null, 2));
-            const savedId = invoice.id || invoices[invoices.length - 1].id;
+
             return { success: true, id: savedId };
         } catch (error) {
             console.error('Error saving invoice:', error);
