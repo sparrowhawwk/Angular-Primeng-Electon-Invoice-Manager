@@ -20,6 +20,7 @@ import { InvoiceService } from '../../services/invoice.service';
 import { ContactService } from '../../services/contact.service';
 import { InventoryService } from '../../services/inventory.service';
 import { CompanyService } from '../../services/company.service';
+import { InvoiceSettingsService } from '../../services/invoice-settings.service';
 import { TransactionChartComponent } from './transaction-chart.component';
 
 interface InvoiceItem {
@@ -79,6 +80,7 @@ interface InvoiceItem {
         [scrollHeight]="tableHeight()"
         stateStorage="session"
         stateKey="invoice-table-state"
+        dataKey="id"
         (onStateRestore)="onStateRestore($event)"
       >
         <ng-template #caption>
@@ -461,7 +463,7 @@ export class InvoicesComponent implements OnInit {
   displayDialog = false;
   displayTrendDialog = false;
   viewMode = signal(false);
-  currentInvoiceId = signal<number | undefined>(undefined);
+  currentInvoiceId = signal<string | number | undefined>(undefined);
   currentInvoiceNumber = '';
   tableHeight = signal<string>('500px');
   globalFilterValue = '';
@@ -527,6 +529,7 @@ export class InvoicesComponent implements OnInit {
     private contactService: ContactService,
     private inventoryService: InventoryService,
     private companyService: CompanyService,
+    private invoiceSettingsService: InvoiceSettingsService,
     private router: Router,
     private messageService: MessageService,
     private confirmationService: ConfirmationService
@@ -657,7 +660,7 @@ export class InvoicesComponent implements OnInit {
     this.items.set(newItems);
   }
 
-  showDialog() {
+  async showDialog() {
     this.loadProductsForSelection();
     this.viewMode.set(false);
     this.currentInvoiceId.set(undefined);
@@ -667,8 +670,21 @@ export class InvoicesComponent implements OnInit {
     this.selectedCustomer.set(null);
     this.items.set([{ productName: '', description: '', quantity: 1, unitPrice: 0, amount: 0 }]);
     this.taxType.set('GST');
-    this.taxRate.set(2.5);
-    this.notes = '';
+    
+    try {
+      const settings = await this.invoiceSettingsService.getInvoiceSettings();
+      if (settings) {
+        this.taxRate.set(parseFloat(settings.defaultTaxRate) || 18);
+        this.notes = [settings.termsAndConditions, settings.notes].filter(Boolean).join('\n\n');
+      } else {
+        this.taxRate.set(18);
+        this.notes = '';
+      }
+    } catch (e) {
+      this.taxRate.set(18);
+      this.notes = '';
+    }
+    
     this.displayDialog = true;
   }
 

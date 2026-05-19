@@ -37,6 +37,10 @@ export const routes: Routes = [
     {
         path: 'settings/company',
         loadComponent: () => import('./pages/settings/company/company').then(m => m.CompanyComponent)
+    },
+    {
+        path: 'settings/invoice',
+        loadComponent: () => import('./pages/settings/invoice/invoice').then(m => m.InvoiceSettingsComponent)
     }
 ];
 

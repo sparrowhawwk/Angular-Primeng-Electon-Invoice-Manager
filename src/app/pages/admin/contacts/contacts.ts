@@ -52,6 +52,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
         [scrollable]="true"
         [scrollHeight]="tableHeight()"
         filterDisplay="menu"
+        dataKey="id"
       >
         <ng-template #caption>
           <div class="flex justify-between items-center bg-gray-50 p-4">
@@ -247,7 +248,7 @@ export class ContactsComponent implements OnInit {
   tableHeight = signal<string>('500px');
 
   contactForm = signal({
-    id: undefined as number | undefined,
+    id: undefined as string | number | undefined,
     name: '',
     phone: '',
     email: '',

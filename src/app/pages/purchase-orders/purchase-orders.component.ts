@@ -66,6 +66,7 @@ import { PurchaseChartComponent } from './purchase-chart.component';
         stripedRows
         [scrollable]="true"
         [scrollHeight]="tableHeight()"
+        dataKey="id"
       >
         <ng-template #caption>
           <div class="flex justify-between items-center bg-gray-50 p-4">
@@ -334,7 +335,7 @@ export class PurchaseOrdersComponent implements OnInit {
   displayDialog = false;
   displayTrendDialog = false;
 
-  currentPoId = signal<number | undefined>(undefined);
+  currentPoId = signal<string | number | undefined>(undefined);
   purchaseDate = signal<Date>(new Date());
   sellerName = signal('');
   sellerGst = signal('');

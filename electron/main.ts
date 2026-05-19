@@ -2,6 +2,7 @@ import { app, BrowserWindow, screen, ipcMain, Menu } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 import * as fs from 'fs';
+import { randomUUID } from 'crypto';
 
 process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception in Main Process:', error);
@@ -147,6 +148,43 @@ try {
         }
     });
 
+    ipcMain.handle('save-invoice-settings', async (event, data) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            if (!fs.existsSync(userDataPath)) {
+                fs.mkdirSync(userDataPath, { recursive: true });
+            }
+            const filePath = path.join(userDataPath, 'invoice-settings.json');
+            fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+            return { success: true };
+        } catch (error) {
+            console.error('Error saving invoice settings:', error);
+            return { success: false, error: (error as Error).message };
+        }
+    });
+
+    ipcMain.handle('get-invoice-settings', async (event) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const filePath = path.join(userDataPath, 'invoice-settings.json');
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf-8');
+                return JSON.parse(data);
+            }
+            // Return defaults if not exists
+            return {
+                prefix: 'INV-',
+                nextNumber: '1',
+                defaultTaxRate: '18',
+                termsAndConditions: '',
+                notes: ''
+            };
+        } catch (error) {
+            console.error('Error getting invoice settings:', error);
+            return null;
+        }
+    });
+
     // Move IPC handlers into app.on('ready') block or ensure they are registered early
     // Actually, top level is usually fine, but let's add a log that they are registered.
     console.log('Main: IPC handlers registered');
@@ -276,7 +314,7 @@ try {
                 }
             } else {
                 // Create new
-                contacts.push({ ...contact, id: Date.now() });
+                contacts.push({ ...contact, id: randomUUID() });
             }
 
             fs.writeFileSync(filePath, JSON.stringify(contacts, null, 2));
@@ -427,7 +465,7 @@ try {
                     return { success: false, error: 'Product not found' };
                 }
             } else {
-                products.push({ ...product, id: Date.now() });
+                products.push({ ...product, id: randomUUID() });
             }
 
             fs.writeFileSync(filePath, JSON.stringify(products, null, 2));
@@ -562,7 +600,7 @@ try {
         }
     });
 
-    ipcMain.handle('get-invoice-by-id', async (event, id: number) => {
+    ipcMain.handle('get-invoice-by-id', async (event, id: string | number) => {
         try {
             const userDataPath = app.getPath('userData');
             const filePath = path.join(userDataPath, 'invoices.json');
@@ -606,14 +644,36 @@ try {
                     return { success: false, error: 'Invoice not found' };
                 }
             } else {
-                const today = new Date();
-                const dateStr = today.getFullYear().toString() +
-                    (today.getMonth() + 1).toString().padStart(2, '0') +
-                    today.getDate().toString().padStart(2, '0');
+                let invoiceNumber = invoice.invoiceNumber;
 
-                const dayInvoices = invoices.filter(inv => inv.invoiceNumber && inv.invoiceNumber.includes(`INV-${dateStr}`));
-                const sequence = (dayInvoices.length + 1).toString().padStart(2, '0');
-                const invoiceNumber = `INV-${dateStr}-${sequence}`;
+                if (!invoiceNumber) {
+                    const settingsPath = path.join(userDataPath, 'invoice-settings.json');
+                    let prefix = 'INV-';
+                    
+                    if (fs.existsSync(settingsPath)) {
+                        try {
+                            const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+                            if (settings.prefix) prefix = settings.prefix;
+                        } catch (e) {
+                            console.error('Error parsing invoice settings', e);
+                        }
+                    }
+                    
+                    const today = new Date();
+                    const dateStr = today.getFullYear().toString() +
+                        (today.getMonth() + 1).toString().padStart(2, '0') +
+                        today.getDate().toString().padStart(2, '0');
+
+                    // Make sure to add a dash after prefix if it doesn't end with one,
+                    // but since the prefix 'INV-' already has a dash, we just append dateStr.
+                    // However, we need a dash before the sequence!
+                    const prefixWithDash = prefix.endsWith('-') ? prefix : `${prefix}-`;
+                    
+                    const dayInvoices = invoices.filter(inv => inv.invoiceNumber && inv.invoiceNumber.includes(`${prefixWithDash}${dateStr}`));
+                    const sequence = (dayInvoices.length + 1).toString().padStart(2, '0');
+                    
+                    invoiceNumber = `${prefixWithDash}${dateStr}-${sequence}`;
+                }
 
                 if (invoice.status === 'finalized') {
                     isNewFinalization = true;
@@ -621,7 +681,7 @@ try {
 
                 const newInvoice = {
                     ...invoice,
-                    id: Date.now(),
+                    id: randomUUID(),
                     invoiceNumber: invoiceNumber
                 };
                 savedId = newInvoice.id;
@@ -803,7 +863,7 @@ try {
                     return { success: false, error: 'Purchase Order not found' };
                 }
             } else {
-                purchases.push({ ...purchase, id: Date.now() });
+                purchases.push({ ...purchase, id: randomUUID() });
             }
 
             fs.writeFileSync(filePath, JSON.stringify(purchases, null, 2));

@@ -55,6 +55,11 @@ export class SidebarComponent implements OnInit {
                         label: 'Company',
                         icon: 'pi pi-briefcase',
                         routerLink: '/settings/company'
+                    },
+                    {
+                        label: 'Invoice',
+                        icon: 'pi pi-receipt',
+                        routerLink: '/settings/invoice'
                     }
                 ]
             }

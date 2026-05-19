@@ -58,6 +58,7 @@ import { InventoryChartComponent } from './inventory-chart.component';
         stripedRows
         [scrollable]="true"
         [scrollHeight]="tableHeight()"
+        dataKey="id"
       >
         <ng-template #caption>
           <div class="flex justify-between items-center bg-gray-50 p-4">
@@ -260,7 +261,7 @@ export class InventoryComponent implements OnInit {
   productDescription = signal('');
   productTotalUnits = signal<any>('');
   productUnitPrice = signal<any>('');
-  currentProductId = signal<number | undefined>(undefined);
+  currentProductId = signal<string | number | undefined>(undefined);
   tableHeight = signal<string>('500px');
 
   constructor(

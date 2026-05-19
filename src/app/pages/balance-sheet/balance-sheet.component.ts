@@ -99,6 +99,7 @@ interface BalanceSheetEntry {
         [responsiveLayout]="'scroll'"
         class="shadow-sm border rounded-lg overflow-hidden"
         [loading]="loading()"
+        dataKey="period"
       >
         <ng-template #header>
           <tr>
@@ -165,7 +166,7 @@ interface BalanceSheetEntry {
                     <p class="text-xs text-gray-500 italic">Outstanding payments from finalized invoices up to this date.</p>
 
                     <div class="max-h-60 overflow-y-auto">
-                        <p-table [value]="entry.details.invoiceList" styleClass="p-datatable-sm" responsiveLayout="scroll">
+                        <p-table [value]="entry.details.invoiceList" styleClass="p-datatable-sm" responsiveLayout="scroll" dataKey="id">
                             <ng-template #header>
                                 <tr>
                                     <th>Inv #</th>
@@ -206,7 +207,7 @@ interface BalanceSheetEntry {
                     <p class="text-xs text-gray-500 italic">Total unpaid amounts from Purchase Orders up to this date.</p>
 
                     <div class="max-h-60 overflow-y-auto">
-                        <p-table [value]="entry.details.poList" styleClass="p-datatable-sm" responsiveLayout="scroll">
+                        <p-table [value]="entry.details.poList" styleClass="p-datatable-sm" responsiveLayout="scroll" dataKey="id">
                             <ng-template #header>
                                 <tr>
                                     <th>PO Reference</th>
